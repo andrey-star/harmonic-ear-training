@@ -1504,6 +1504,7 @@ function findBestBass(prevBass, targetPc, minMidi = 41, maxMidi = 55) {
    ======================================================================== */
 
 let audioInitialized = false;
+let synthsReady = false;
 let upperSynth = null;
 let bassSynth = null;
 let masterLimiter = null;
@@ -1513,85 +1514,80 @@ let toneFilter = null;
 let bassFilter = null;
 let activePlaybackTimers = [];
 
-async function initAudio() {
-  if (audioInitialized) return;
+function setupSynths() {
+  if (synthsReady || !window.Tone) return;
   try {
-    if (window.Tone) {
-      await Tone.start();
+    masterLimiter = new Tone.Limiter(-1).toDestination();
+    masterVol = new Tone.Volume(-8).connect(masterLimiter);
 
-      // Master limiter to eliminate digital clipping
-      masterLimiter = new Tone.Limiter(-1).toDestination();
-      masterVol = new Tone.Volume(-8).connect(masterLimiter);
+    toneFilter = new Tone.Filter({
+      frequency: 2200,
+      type: "lowpass",
+      rolloff: -12
+    }).connect(masterVol);
 
-      // Warm acoustic lowpass filter & subtle hall space for upper voices
-      toneFilter = new Tone.Filter({
-        frequency: 2200,
-        type: "lowpass",
-        rolloff: -12
-      }).connect(masterVol);
+    // Instant algorithmic reverb: zero async buffer generation delay
+    toneReverb = new Tone.Freeverb({
+      roomSize: 0.6,
+      dampening: 2500
+    }).connect(toneFilter);
+    toneReverb.wet.value = 0.18;
 
-      toneReverb = new Tone.Reverb({
-        decay: 1.5,
-        preDelay: 0.01,
-        wet: 0.18
-      }).connect(toneFilter);
+    upperSynth = new Tone.PolySynth(Tone.Synth, {
+      maxPolyphony: 12,
+      volume: 0,
+      oscillator: { type: "triangle" },
+      envelope: {
+        attack: 0.014, // 14ms smooth attack
+        decay: 2.1,
+        sustain: 0.18,
+        release: 0.9
+      }
+    }).connect(toneReverb);
 
-      // Upper voices synth (pure triangle wave, Rhodes/piano acoustic character)
-      upperSynth = new Tone.PolySynth(Tone.Synth, {
-        maxPolyphony: 12,
-        volume: 0,
-        oscillator: {
-          type: "triangle"
-        },
-        envelope: {
-          attack: 0.014, // 14ms smooth attack prevents transient clicks
-          decay: 2.1,
-          sustain: 0.18,
-          release: 0.9
-        }
-      }).connect(toneReverb);
+    bassFilter = new Tone.Filter({
+      frequency: 520,
+      type: "lowpass",
+      rolloff: -12
+    }).connect(masterVol);
 
-      // Dedicated baritone bass synth (pure fundamental sine, 520Hz filter, zero clank or overdrive)
-      bassFilter = new Tone.Filter({
-        frequency: 520,
-        type: "lowpass",
-        rolloff: -12
-      }).connect(masterVol);
+    bassSynth = new Tone.PolySynth(Tone.Synth, {
+      maxPolyphony: 4,
+      volume: -1,
+      oscillator: { type: "sine" },
+      envelope: {
+        attack: 0.030, // 30ms anti-click ramp
+        decay: 2.3,
+        sustain: 0.25,
+        release: 1.0
+      }
+    }).connect(bassFilter);
 
-      bassSynth = new Tone.PolySynth(Tone.Synth, {
-        maxPolyphony: 4,
-        volume: -1,
-        oscillator: {
-          type: "sine"
-        },
-        envelope: {
-          attack: 0.030, // 30ms anti-click ramp
-          decay: 2.3,
-          sustain: 0.25,
-          release: 1.0
-        }
-      }).connect(bassFilter);
-
-      await toneReverb.generate();
-    }
-    audioInitialized = true;
+    synthsReady = true;
   } catch (err) {
-    console.warn("Audio init deferred or failed:", err);
+    console.warn("Synth setup deferred:", err);
   }
 }
 
-function initAudioUserGesture() {
-  initAudio();
+async function ensureAudioReady() {
+  setupSynths();
+  if (window.Tone && Tone.context.state !== "running") {
+    try {
+      await Tone.start();
+    } catch (err) {
+      console.warn("Tone.start error:", err);
+    }
+  }
+  audioInitialized = true;
 }
-document.addEventListener("click", () => { if (!audioInitialized) initAudio(); }, { once: true });
-document.addEventListener("keydown", () => { if (!audioInitialized) initAudio(); }, { once: true });
+
+document.addEventListener("click", () => { ensureAudioReady(); }, { once: true });
+document.addEventListener("keydown", () => { ensureAudioReady(); }, { once: true });
 
 function stopAllPlayback() {
-  // Clear any scheduled JS timeouts
   activePlaybackTimers.forEach(id => clearTimeout(id));
   activePlaybackTimers = [];
 
-  // Stop Tone.js notes cleanly
   if (upperSynth) {
     try { upperSynth.releaseAll(); } catch (e) {}
   }
@@ -1599,7 +1595,6 @@ function stopAllPlayback() {
     try { bassSynth.releaseAll(); } catch (e) {}
   }
 
-  // Remove playing highlights
   document.querySelectorAll(".active-playing, .active-sound").forEach(el => {
     el.classList.remove("active-playing", "active-sound");
   });
@@ -1607,25 +1602,22 @@ function stopAllPlayback() {
 }
 
 /**
- * Play a voiced chord (array of MIDI numbers) with acoustic envelope and voice balancing.
+ * Play a voiced chord with acoustic envelope and voice balancing.
  */
-function playMidiChord(midiNotes, durationSec, bassMidi = null) {
-  if (!audioInitialized) initAudio();
+async function playMidiChord(midiNotes, durationSec, bassMidi = null) {
+  await ensureAudioReady();
 
   const allNotes = [...midiNotes];
   if (bassMidi !== null && !allNotes.includes(bassMidi)) {
     allNotes.unshift(bassMidi);
   }
 
-  // Visual piano highlight (illuminates keys if user opens the drawer)
   highlightPianoNotes(allNotes, bassMidi);
   setTimeout(() => {
     clearPianoHighlights();
   }, Math.max(300, durationSec * 800));
 
   if (upperSynth && bassSynth) {
-    // Dynamic voice weighting to eliminate chord-slab effect:
-    // Tenor: 0.58, Alto: 0.52, Soprano: 0.55
     const upperVoicesMidi = allNotes.filter(m => m !== bassMidi).sort((a, b) => a - b);
     const weights = [0.58, 0.52, 0.55];
 
@@ -1635,7 +1627,6 @@ function playMidiChord(midiNotes, durationSec, bassMidi = null) {
       upperSynth.triggerAttackRelease(noteStr, durationSec, undefined, vel);
     });
 
-    // Grounded bass root
     if (bassMidi !== null) {
       const bassString = Tone.Frequency(bassMidi, "midi").toNote();
       bassSynth.triggerAttackRelease(bassString, durationSec, undefined, 0.66);
@@ -1808,8 +1799,9 @@ function getChordDuration() {
   return beatSec * 1.5; // ~1.2s at 75 BPM
 }
 
-function playSequence() {
+async function playSequence() {
   stopAllPlayback();
+  await ensureAudioReady();
 
   const chordDur = getChordDuration();
   const tonicDur = Math.max(1.4, chordDur * 1.15); // Clear sustained tonic chord
@@ -1862,8 +1854,10 @@ function playSequence() {
   activePlaybackTimers.push(finishTimer);
 }
 
-function playAnchorOnly() {
+async function playAnchorOnly() {
   stopAllPlayback();
+  await ensureAudioReady();
+
   if (!STATE.tonicAnchor) {
     STATE.tonicAnchor = buildTonicVoicing(STATE.currentRootMidi, STATE.currentKeyName);
   }
@@ -1880,8 +1874,10 @@ function playAnchorOnly() {
   activePlaybackTimers.push(finishTimer);
 }
 
-function playProgressionOnly() {
+async function playProgressionOnly() {
   stopAllPlayback();
+  await ensureAudioReady();
+
   const chordDur = getChordDuration();
   let currentDelay = 0;
 
@@ -1907,8 +1903,10 @@ function playProgressionOnly() {
   activePlaybackTimers.push(finishTimer);
 }
 
-function playSingleChord(chordIndex) {
+async function playSingleChord(chordIndex) {
   stopAllPlayback();
+  await ensureAudioReady();
+
   const chord = STATE.progression[chordIndex];
   if (!chord) return;
 
@@ -2351,6 +2349,7 @@ document.addEventListener("keydown", (e) => {
    ======================================================================== */
 
 window.addEventListener("DOMContentLoaded", () => {
+  setupSynths();
   renderPianoKeyboard();
   buildRomanButtons();
   generateNewExercise(false); // don't autoplay until user gesture
