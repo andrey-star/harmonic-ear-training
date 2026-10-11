@@ -1,0 +1,2381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Harmonic Ear Trainer — Functional Harmony & Roman Numerals</title>
+  <!-- Tone.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+  <style>
+    :root {
+      /* Classical Music / Henle Urtext Paper Aesthetic */
+      --bg: #f8f7f4;
+      --surface: #ffffff;
+      --surface-subtle: #f2f0eb;
+      --surface-hover: #eae7df;
+      --border: #dcd8ce;
+      --border-light: #eae7df;
+      --text: #1d1b18;
+      --text-muted: #69655c;
+      --text-dim: #999385;
+
+      /* Restrained harmonic tints */
+      --tonic: #1b4d3e;
+      --tonic-bg: #eef5f1;
+      --tonic-border: #9ec5b1;
+
+      --subdominant: #7e4a1f;
+      --subdominant-bg: #f8f1ea;
+      --subdominant-border: #dcbe9f;
+
+      --dominant: #782231;
+      --dominant-bg: #f8ecee;
+      --dominant-border: #d89fa9;
+
+      --ink: #1d1b18;
+      --ink-subtle: #3a3731;
+      --correct: #1b4d3e;
+      --incorrect: #782231;
+
+      --font-serif: "Iowan Old Style", "Palatino Linotype", "Palatino", "Baskerville", "Georgia", serif;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: "SF Mono", "Menlo", monospace;
+
+      --radius: 3px;
+    }
+
+    [data-theme="dark"] {
+      --bg: #141312;
+      --surface: #1b1a18;
+      --surface-subtle: #23221f;
+      --surface-hover: #2c2a26;
+      --border: #33312c;
+      --border-light: #282622;
+      --text: #edeae2;
+      --text-muted: #969185;
+      --text-dim: #676359;
+
+      --tonic: #88c5a0;
+      --tonic-bg: #16261d;
+      --tonic-border: #2d4c39;
+
+      --subdominant: #dab082;
+      --subdominant-bg: #291e14;
+      --subdominant-border: #4a3624;
+
+      --dominant: #d78896;
+      --dominant-bg: #291519;
+      --dominant-border: #4d232c;
+
+      --ink: #edeae2;
+      --ink-subtle: #c5c0b4;
+      --correct: #88c5a0;
+      --incorrect: #d78896;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+      padding: 32px 20px 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: background-color 0.2s, color 0.2s;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 860px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    /* HEADER */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .title-group h1 {
+      font-family: var(--font-serif);
+      font-size: 1.65rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--text);
+    }
+
+    .title-group p {
+      color: var(--text-muted);
+      font-size: 0.86rem;
+      margin-top: 3px;
+    }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .stats-summary {
+      font-feature-settings: "tnum";
+    }
+
+    .stats-summary strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .theme-toggle-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 3px 8px;
+      border-radius: var(--radius);
+      font-size: 0.74rem;
+      cursor: pointer;
+      font-family: inherit;
+      transition: 0.15s;
+    }
+
+    .theme-toggle-btn:hover {
+      color: var(--text);
+      border-color: var(--text-muted);
+    }
+
+    /* CONTROLS ROW */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 1.6fr 1.1fr auto;
+      gap: 14px;
+      align-items: flex-end;
+    }
+
+    @media (max-width: 768px) {
+      .controls-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .control-item {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .control-item label {
+      font-size: 0.73rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    select, input[type="range"] {
+      width: 100%;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px 9px;
+      font-size: 0.84rem;
+      font-family: inherit;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    select:focus {
+      border-color: var(--ink);
+    }
+
+    input[type="range"] {
+      padding: 0;
+      height: 4px;
+      border: none;
+      background: var(--border);
+      accent-color: var(--ink);
+      margin-top: 10px;
+    }
+
+    /* TOGGLE SWITCH */
+    .toggle-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+      margin-bottom: 2px;
+    }
+
+    .toggle-wrapper input {
+      display: none;
+    }
+
+    .toggle-slider {
+      width: 30px;
+      height: 16px;
+      background: var(--border);
+      border-radius: 12px;
+      position: relative;
+      transition: background 0.2s;
+    }
+
+    .toggle-slider::after {
+      content: '';
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--surface);
+      top: 3px;
+      left: 3px;
+      transition: transform 0.2s;
+    }
+
+    .toggle-wrapper input:checked + .toggle-slider {
+      background: var(--ink);
+    }
+
+    .toggle-wrapper input:checked + .toggle-slider::after {
+      transform: translateX(14px);
+    }
+
+    /* PLAYBACK BAR */
+    .deck-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .deck-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: var(--radius);
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      transition: all 0.12s ease;
+      user-select: none;
+      font-family: inherit;
+    }
+
+    .btn:hover {
+      background: var(--surface-hover);
+      border-color: var(--text-dim);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn-primary {
+      background: var(--ink);
+      color: var(--bg);
+      border-color: var(--ink);
+    }
+    .btn-primary:hover {
+      background: var(--ink-subtle);
+      border-color: var(--ink-subtle);
+      color: var(--bg);
+    }
+
+    .btn kbd {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      opacity: 0.6;
+      border: none;
+      background: transparent;
+      padding: 0;
+    }
+
+    /* MEASURE STRIP (TIMELINE) */
+    .measure-strip {
+      display: grid;
+      grid-template-columns: 1.4fr 0.7fr 1fr 1fr 1fr;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    @media (max-width: 640px) {
+      .measure-strip {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .measure-node {
+      padding: 10px 8px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 2px;
+      border-right: 1px solid var(--border);
+      transition: background 0.15s;
+      position: relative;
+    }
+
+    .measure-node:last-child {
+      border-right: none;
+    }
+
+    .measure-node.pause-node {
+      background: var(--surface-subtle);
+      color: var(--text-dim);
+    }
+
+    .measure-tag {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      font-weight: 500;
+    }
+
+    .measure-content {
+      font-family: var(--font-serif);
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .measure-node.active-playing {
+      background: var(--surface-subtle);
+    }
+
+    .measure-node.active-playing::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--ink);
+    }
+
+    /* EXERCISE SECTION */
+    .exercise-section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .chords-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    @media (max-width: 768px) {
+      .chords-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chord-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      transition: border-color 0.15s;
+    }
+
+    .chord-card.active-sound {
+      border-color: var(--text-muted);
+    }
+
+    .chord-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .chord-title {
+      font-family: var(--font-serif);
+      font-size: 1.05rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .chord-btn-play {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: var(--radius);
+      padding: 2px 8px;
+      font-size: 0.72rem;
+      font-family: inherit;
+      cursor: pointer;
+      transition: 0.12s;
+    }
+
+    .chord-btn-play:hover {
+      color: var(--text);
+      border-color: var(--text-dim);
+    }
+
+    /* STAGE 1 CHOICES */
+    .stage-block {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .stage-label {
+      font-size: 0.7rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-dim);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .family-options {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .family-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-radius: var(--radius);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.12s ease;
+      text-align: left;
+      font-family: inherit;
+    }
+
+    .family-btn:hover {
+      background: var(--surface-hover);
+    }
+
+    .family-btn.selected-t {
+      background: var(--tonic-bg);
+      border-color: var(--tonic-border);
+      color: var(--tonic);
+      font-weight: 600;
+    }
+
+    .family-btn.selected-s {
+      background: var(--subdominant-bg);
+      border-color: var(--subdominant-border);
+      color: var(--subdominant);
+      font-weight: 600;
+    }
+
+    .family-btn.selected-d {
+      background: var(--dominant-bg);
+      border-color: var(--dominant-border);
+      color: var(--dominant);
+      font-weight: 600;
+    }
+
+    .fam-tag {
+      font-size: 0.85rem;
+      letter-spacing: 0.01em;
+    }
+
+    .fam-sub {
+      font-family: var(--font-serif);
+      font-size: 0.78rem;
+      opacity: 0.75;
+    }
+
+    /* STAGE 2: ROMAN NUMERAL SELECTOR */
+    .roman-container {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border-light);
+    }
+
+    .roman-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+    }
+
+    .roman-btn {
+      padding: 5px 2px;
+      text-align: center;
+      font-family: var(--font-serif);
+      font-size: 0.95rem;
+      font-weight: 600;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      cursor: pointer;
+      transition: 0.12s;
+    }
+
+    .roman-btn:hover {
+      background: var(--surface-hover);
+    }
+
+    .roman-btn.active-rn {
+      background: var(--ink);
+      color: var(--bg);
+      border-color: var(--ink);
+    }
+
+    /* VERDICT BADGES (In stage label and header) */
+    .verdict-pill {
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 1px 7px;
+      border-radius: var(--radius);
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .verdict-pill.verdict-correct {
+      background: var(--tonic-bg);
+      color: var(--correct);
+      border: 1px solid var(--tonic-border);
+    }
+
+    .verdict-pill.verdict-incorrect {
+      background: var(--dominant-bg);
+      color: var(--incorrect);
+      border: 1px solid var(--dominant-border);
+    }
+
+    .verdict-pill.verdict-revealed {
+      background: var(--surface-subtle);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+
+    /* CARD VERDICT BORDER STATES */
+    .chord-card.card-correct {
+      border-color: var(--tonic-border);
+    }
+
+    .chord-card.card-incorrect {
+      border-color: var(--dominant-border);
+    }
+
+    /* BUTTON POST-EVALUATION STATES */
+    .family-btn.btn-correct-choice {
+      background: var(--tonic-bg) !important;
+      border-color: var(--tonic) !important;
+      color: var(--tonic) !important;
+      box-shadow: inset 0 0 0 1px var(--tonic-border);
+    }
+
+    .family-btn.btn-wrong-choice {
+      background: var(--dominant-bg) !important;
+      border-color: var(--dominant-border) !important;
+      color: var(--incorrect) !important;
+      position: relative;
+    }
+
+    .family-btn.btn-actual-target {
+      border: 1px dashed var(--tonic) !important;
+      background: var(--surface) !important;
+      color: var(--tonic) !important;
+      position: relative;
+    }
+
+    .family-btn.btn-actual-target::after {
+      content: "Actual";
+      font-size: 0.64rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 1px 5px;
+      border-radius: 2px;
+      background: var(--tonic-bg);
+      color: var(--tonic);
+      border: 1px solid var(--tonic-border);
+      position: absolute;
+      right: 8px;
+    }
+
+    .roman-btn.btn-correct-choice {
+      background: var(--tonic-bg) !important;
+      border-color: var(--tonic) !important;
+      color: var(--tonic) !important;
+    }
+
+    .roman-btn.btn-wrong-choice {
+      background: var(--dominant-bg) !important;
+      border-color: var(--dominant-border) !important;
+      color: var(--incorrect) !important;
+      text-decoration: line-through;
+    }
+
+    .roman-btn.btn-actual-target {
+      border: 1px dashed var(--tonic) !important;
+      color: var(--tonic) !important;
+    }
+
+    /* FEEDBACK CARD */
+    .feedback-box {
+      margin-top: 6px;
+      padding: 11px 13px;
+      border-radius: var(--radius);
+      font-size: 0.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      line-height: 1.45;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .feedback-box.correct {
+      background: var(--tonic-bg);
+      border: 1px solid var(--tonic-border);
+      border-left: 4px solid var(--correct);
+    }
+
+    .feedback-box.incorrect {
+      background: var(--dominant-bg);
+      border: 1px solid var(--dominant-border);
+      border-left: 4px solid var(--incorrect);
+    }
+
+    .feedback-box.revealed {
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--text-dim);
+    }
+
+    .feedback-status-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .feedback-tag {
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: var(--radius);
+      line-height: 1.25;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .feedback-tag.tag-correct {
+      background: var(--correct);
+      color: #ffffff;
+    }
+
+    [data-theme="dark"] .feedback-tag.tag-correct {
+      background: var(--correct);
+      color: #141312;
+    }
+
+    .feedback-tag.tag-incorrect {
+      background: var(--incorrect);
+      color: #ffffff;
+    }
+
+    [data-theme="dark"] .feedback-tag.tag-incorrect {
+      background: var(--incorrect);
+      color: #141312;
+    }
+
+    .feedback-tag.tag-revealed {
+      background: var(--text-dim);
+      color: var(--bg);
+    }
+
+    .feedback-actual {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .feedback-headline {
+      font-family: var(--font-serif);
+      font-weight: 600;
+      font-size: 0.94rem;
+    }
+
+    .feedback-box.correct .feedback-headline {
+      color: var(--correct);
+    }
+
+    .feedback-box.incorrect .feedback-headline {
+      color: var(--incorrect);
+    }
+
+    .feedback-box.revealed .feedback-headline {
+      color: var(--text);
+    }
+
+    .feedback-guess-note {
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .feedback-desc-text {
+      font-size: 0.79rem;
+      color: var(--text);
+      line-height: 1.45;
+    }
+
+    .chord-notes-badge {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      padding-top: 4px;
+      border-top: 1px dashed rgba(0, 0, 0, 0.08);
+    }
+
+    [data-theme="dark"] .chord-notes-badge {
+      border-top-color: rgba(255, 255, 255, 0.1);
+    }
+
+    /* ACTION BAR */
+    .action-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+    }
+
+    #prompt-status {
+      font-size: 0.84rem;
+      color: var(--text-muted);
+    }
+
+    /* PIANO KEYBOARD DRAWER (Closed by default) */
+    details.keyboard-drawer {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      padding: 12px 16px;
+      color: var(--text);
+      font-size: 0.85rem;
+    }
+
+    details.keyboard-drawer summary {
+      cursor: pointer;
+      font-family: var(--font-serif);
+      font-weight: 600;
+      font-size: 0.95rem;
+      user-select: none;
+      color: var(--text);
+      outline: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    details.keyboard-drawer summary:hover {
+      color: var(--text-muted);
+    }
+
+    .keyboard-drawer-content {
+      padding-top: 10px;
+      margin-top: 8px;
+      border-top: 1px solid var(--border-light);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .visualizer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .piano-wrapper {
+      position: relative;
+      height: 92px;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      display: flex;
+      user-select: none;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .piano-keys {
+      display: flex;
+      position: relative;
+      height: 100%;
+      width: 100%;
+      min-width: 640px;
+    }
+
+    .white-key {
+      flex: 1 1 0;
+      height: 100%;
+      background: #faf8f5;
+      border: 1px solid #dcd7cb;
+      border-right: none;
+      border-radius: 0 0 2px 2px;
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 5px;
+      font-size: 0.63rem;
+      font-family: var(--font-serif);
+      color: #9c9586;
+      font-weight: 600;
+      cursor: pointer;
+      z-index: 1;
+      transition: background 0.08s;
+      box-shadow: inset 0 -1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .white-key:last-child {
+      border-right: 1px solid #dcd7cb;
+    }
+
+    .white-key:hover {
+      background: #f2eee6;
+    }
+
+    .white-key:active {
+      background: #e6e0d2;
+    }
+
+    [data-theme="dark"] .white-key {
+      background: #252320;
+      border-color: #383530;
+      color: #8c877a;
+    }
+
+    [data-theme="dark"] .white-key:last-child {
+      border-right: 1px solid #383530;
+    }
+
+    [data-theme="dark"] .white-key:hover {
+      background: #2f2d29;
+    }
+
+    .black-key {
+      position: absolute;
+      width: 2.2%;
+      min-width: 12px;
+      max-width: 16px;
+      height: 60%;
+      background: #201e1b;
+      border: 1px solid #141312;
+      border-top: none;
+      border-radius: 0 0 2px 2px;
+      z-index: 2;
+      cursor: pointer;
+      transform: translateX(-50%);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35);
+      transition: background 0.08s;
+    }
+
+    .black-key:hover {
+      background: #33302b;
+    }
+
+    .black-key:active {
+      background: #11100f;
+    }
+
+    [data-theme="dark"] .black-key {
+      background: #151412;
+      border-color: #2b2824;
+    }
+
+    /* Restrained acoustic piano highlights */
+    .white-key.active-voice {
+      background: #486581 !important;
+      color: #ffffff !important;
+      box-shadow: inset 0 0 0 1px #334e68;
+    }
+    .white-key.active-bass {
+      background: #9c4221 !important;
+      color: #ffffff !important;
+      box-shadow: inset 0 0 0 1px #7b3419;
+    }
+
+    .black-key.active-voice {
+      background: #334e68 !important;
+      box-shadow: 0 0 0 1px #627d98, 0 3px 6px rgba(0,0,0,0.4) !important;
+    }
+    .black-key.active-bass {
+      background: #7b3419 !important;
+      box-shadow: 0 0 0 1px #ba4a23, 0 3px 6px rgba(0,0,0,0.4) !important;
+    }
+
+    /* THEORY TREATISE SECTION */
+    details.theory-drawer {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      padding: 14px 18px;
+      color: var(--text);
+      font-size: 0.85rem;
+    }
+
+    details.theory-drawer summary {
+      cursor: pointer;
+      font-family: var(--font-serif);
+      font-weight: 600;
+      font-size: 0.95rem;
+      user-select: none;
+      color: var(--text);
+      outline: none;
+    }
+
+    details.theory-drawer summary:hover {
+      color: var(--text-muted);
+    }
+
+    .theory-content {
+      padding-top: 12px;
+      margin-top: 10px;
+      border-top: 1px solid var(--border-light);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      line-height: 1.6;
+      color: var(--text-muted);
+    }
+
+    .theory-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    .theory-pill {
+      background: var(--surface-subtle);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      border-left: 3px solid var(--border);
+    }
+    .theory-pill.t { border-left-color: var(--tonic); }
+    .theory-pill.s { border-left-color: var(--subdominant); }
+    .theory-pill.d { border-left-color: var(--dominant); }
+
+    .theory-pill h4 {
+      font-family: var(--font-serif);
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+
+    /* AUDIO INIT BANNER */
+    #audio-banner {
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 14px;
+      border-radius: var(--radius);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- AUDIO INITIALIZATION BANNER -->
+  <div id="audio-banner">
+    <span>Audio is suspended by browser. Click anywhere or press Enable Audio.</span>
+    <button class="btn" style="padding: 4px 10px;" onclick="initAudioUserGesture()">Enable Audio</button>
+  </div>
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-top">
+      <div class="title-group">
+        <h1>Harmonic Ear Training</h1>
+        <p>Functional tonal analysis & voice leading in major keys</p>
+      </div>
+
+      <div class="header-meta">
+        <span class="stats-summary"><strong id="stat-completed">0</strong> solved · <strong id="stat-accuracy">—</strong></span>
+        <a href="about.html" class="theme-toggle-btn" style="text-decoration: none;" target="_blank" title="Teacher Reference & Theory Rules">Pedagogy & Rules</a>
+        <button class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Toggle visual theme">Ebony</button>
+      </div>
+    </div>
+
+    <!-- CONFIGURATION CONTROLS -->
+    <div class="controls-grid">
+      <div class="control-item">
+        <label for="key-select">Tonic Key</label>
+        <select id="key-select" onchange="onKeyChange()">
+          <option value="C" selected>C Major</option>
+          <option value="G">G Major</option>
+          <option value="D">D Major</option>
+          <option value="A">A Major</option>
+          <option value="E">E Major</option>
+          <option value="F">F Major</option>
+          <option value="Bb">B♭ Major</option>
+          <option value="Eb">E♭ Major</option>
+          <option value="Ab">A♭ Major</option>
+          <option value="random">Random Key</option>
+        </select>
+      </div>
+
+      <div class="control-item">
+        <label for="progression-style">Progression Pattern</label>
+        <select id="progression-style" onchange="onProgressionStyleChange()">
+          <option value="syntactic" selected>Musical Patterns & Substitutions</option>
+          <option value="random">Random Diatonic Triads</option>
+        </select>
+      </div>
+
+      <div class="control-item">
+        <label for="tempo-range">Tempo: <span id="tempo-val">75 BPM</span></label>
+        <input type="range" id="tempo-range" min="45" max="120" value="75" oninput="onTempoChange(this.value)">
+      </div>
+
+      <div class="control-item" style="justify-content: flex-end;">
+        <label class="toggle-wrapper" title="Identify the exact Roman numerals">
+          <input type="checkbox" id="toggle-stage2" onchange="onStage2Toggle(this.checked)">
+          <div class="toggle-slider"></div>
+          <span style="font-size: 0.8rem; color: var(--text-muted);">Stage 2: Roman Numerals</span>
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <!-- PLAYBACK BAR -->
+  <section class="deck-bar">
+    <div class="deck-buttons">
+      <button class="btn btn-primary" id="btn-play-all" onclick="playSequence()">
+        <span>Play Sequence</span> <kbd>P</kbd>
+      </button>
+      <button class="btn" id="btn-play-anchor" onclick="playAnchorOnly()">
+        <span>Tonic Anchor</span> <kbd>A</kbd>
+      </button>
+      <button class="btn" id="btn-play-prog" onclick="playProgressionOnly()">
+        <span>Progression</span> <kbd>Space</kbd>
+      </button>
+      <button class="btn" id="btn-new" onclick="generateNewExercise()">
+        <span>New Exercise</span> <kbd>N</kbd>
+      </button>
+      <button class="btn" id="btn-stop" onclick="stopAllPlayback()">
+        <span>Stop</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- MEASURE STRIP (TIMELINE) -->
+  <div class="measure-strip" id="timeline">
+    <div class="measure-node" id="node-anchor">
+      <span class="measure-tag">Tonic Anchor</span>
+      <span class="measure-content" id="timeline-anchor-text">Tonic I (C Maj)</span>
+    </div>
+    <div class="measure-node pause-node" id="node-pause">
+      <span class="measure-tag">Pause</span>
+      <span class="measure-content" style="font-size: 0.85rem; font-family: inherit;">1.1s</span>
+    </div>
+    <div class="measure-node" id="node-chord-0">
+      <span class="measure-tag">Chord I</span>
+      <span class="measure-content" id="timeline-c0-text">—</span>
+    </div>
+    <div class="measure-node" id="node-chord-1">
+      <span class="measure-tag">Chord II</span>
+      <span class="measure-content" id="timeline-c1-text">—</span>
+    </div>
+    <div class="measure-node" id="node-chord-2">
+      <span class="measure-tag">Chord III</span>
+      <span class="measure-content" id="timeline-c2-text">—</span>
+    </div>
+  </div>
+
+  <!-- EXERCISE CARDS -->
+  <section class="exercise-section">
+    <div class="chords-grid">
+
+      <!-- CHORD 1 CARD -->
+      <div class="chord-card" id="card-chord-0">
+        <div class="chord-header">
+          <div class="chord-title">Chord I</div>
+          <button class="chord-btn-play" onclick="playSingleChord(0)">Listen</button>
+        </div>
+
+        <!-- STAGE 1: FAMILY SELECTION -->
+        <div class="stage-block">
+          <div class="stage-label">
+            <span>Function</span>
+            <span id="badge-fam-0"></span>
+          </div>
+          <div class="family-options">
+            <button class="family-btn" data-fam="T" onclick="selectFamily(0, 'T')">
+              <span class="fam-tag">Tonic (T)</span>
+              <span class="fam-sub">I, iii, vi</span>
+            </button>
+            <button class="family-btn" data-fam="S" onclick="selectFamily(0, 'S')">
+              <span class="fam-tag">Subdominant (S)</span>
+              <span class="fam-sub">ii, IV</span>
+            </button>
+            <button class="family-btn" data-fam="D" onclick="selectFamily(0, 'D')">
+              <span class="fam-tag">Dominant (D)</span>
+              <span class="fam-sub">V, vii°</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- STAGE 2: ROMAN NUMERALS -->
+        <div class="roman-container hidden" id="stage2-box-0">
+          <div class="stage-label">
+            <span>Roman Numeral</span>
+            <span id="badge-rn-0"></span>
+          </div>
+          <div class="roman-grid" id="roman-grid-0">
+            <!-- Buttons injected via JS -->
+          </div>
+        </div>
+
+        <!-- FEEDBACK RESULT -->
+        <div class="feedback-box hidden" id="feedback-0">
+          <div class="feedback-actual" id="feedback-title-0"></div>
+          <div id="feedback-desc-0"></div>
+          <div>
+            <span class="chord-notes-badge" id="feedback-notes-0"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHORD 2 CARD -->
+      <div class="chord-card" id="card-chord-1">
+        <div class="chord-header">
+          <div class="chord-title">Chord II</div>
+          <button class="chord-btn-play" onclick="playSingleChord(1)">Listen</button>
+        </div>
+
+        <!-- STAGE 1: FAMILY SELECTION -->
+        <div class="stage-block">
+          <div class="stage-label">
+            <span>Function</span>
+            <span id="badge-fam-1"></span>
+          </div>
+          <div class="family-options">
+            <button class="family-btn" data-fam="T" onclick="selectFamily(1, 'T')">
+              <span class="fam-tag">Tonic (T)</span>
+              <span class="fam-sub">I, iii, vi</span>
+            </button>
+            <button class="family-btn" data-fam="S" onclick="selectFamily(1, 'S')">
+              <span class="fam-tag">Subdominant (S)</span>
+              <span class="fam-sub">ii, IV</span>
+            </button>
+            <button class="family-btn" data-fam="D" onclick="selectFamily(1, 'D')">
+              <span class="fam-tag">Dominant (D)</span>
+              <span class="fam-sub">V, vii°</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- STAGE 2: ROMAN NUMERALS -->
+        <div class="roman-container hidden" id="stage2-box-1">
+          <div class="stage-label">
+            <span>Roman Numeral</span>
+            <span id="badge-rn-1"></span>
+          </div>
+          <div class="roman-grid" id="roman-grid-1">
+            <!-- Buttons injected via JS -->
+          </div>
+        </div>
+
+        <!-- FEEDBACK RESULT -->
+        <div class="feedback-box hidden" id="feedback-1">
+          <div class="feedback-actual" id="feedback-title-1"></div>
+          <div id="feedback-desc-1"></div>
+          <div>
+            <span class="chord-notes-badge" id="feedback-notes-1"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CHORD 3 CARD -->
+      <div class="chord-card" id="card-chord-2">
+        <div class="chord-header">
+          <div class="chord-title">Chord III</div>
+          <button class="chord-btn-play" onclick="playSingleChord(2)">Listen</button>
+        </div>
+
+        <!-- STAGE 1: FAMILY SELECTION -->
+        <div class="stage-block">
+          <div class="stage-label">
+            <span>Function</span>
+            <span id="badge-fam-2"></span>
+          </div>
+          <div class="family-options">
+            <button class="family-btn" data-fam="T" onclick="selectFamily(2, 'T')">
+              <span class="fam-tag">Tonic (T)</span>
+              <span class="fam-sub">I, iii, vi</span>
+            </button>
+            <button class="family-btn" data-fam="S" onclick="selectFamily(2, 'S')">
+              <span class="fam-tag">Subdominant (S)</span>
+              <span class="fam-sub">ii, IV</span>
+            </button>
+            <button class="family-btn" data-fam="D" onclick="selectFamily(2, 'D')">
+              <span class="fam-tag">Dominant (D)</span>
+              <span class="fam-sub">V, vii°</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- STAGE 2: ROMAN NUMERALS -->
+        <div class="roman-container hidden" id="stage2-box-2">
+          <div class="stage-label">
+            <span>Roman Numeral</span>
+            <span id="badge-rn-2"></span>
+          </div>
+          <div class="roman-grid" id="roman-grid-2">
+            <!-- Buttons injected via JS -->
+          </div>
+        </div>
+
+        <!-- FEEDBACK RESULT -->
+        <div class="feedback-box hidden" id="feedback-2">
+          <div class="feedback-actual" id="feedback-title-2"></div>
+          <div id="feedback-desc-2"></div>
+          <div>
+            <span class="chord-notes-badge" id="feedback-notes-2"></span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ACTION / CHECK BUTTONS -->
+    <div class="action-bar">
+      <div>
+        <span id="prompt-status">Assign each chord to its functional family, then check.</span>
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <button class="btn hidden" id="btn-reveal-all" onclick="revealAnswers(true)">
+          Reveal All
+        </button>
+        <button class="btn btn-primary" id="btn-submit" onclick="submitAnswers()">
+          <span>Check Answers</span>
+          <kbd>Enter</kbd>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- KEYBOARD VOICING DRAWER (Closed by default) -->
+  <details class="keyboard-drawer" id="keyboard-drawer">
+    <summary>Keyboard Voicing Display</summary>
+    <div class="keyboard-drawer-content">
+      <div class="visualizer-header">
+        <span>Voicing Analysis (Bass in Terracotta, Upper Voices in Slate)</span>
+        <span id="voicing-info-text">Voice Leading: Minimum Displacement</span>
+      </div>
+      <div class="piano-wrapper">
+        <div class="piano-keys" id="piano-keyboard">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- THEORY TREATISE SECTION -->
+  <details class="theory-drawer">
+    <summary>Notes on Functional Harmony & Voice Leading</summary>
+    <div class="theory-content">
+      <p>
+        In functional tonal harmony (Hugo Riemann's system), every diatonic chord belongs to one of three primary functional archetypes:
+      </p>
+
+      <div class="theory-grid">
+        <div class="theory-pill t">
+          <h4>Tonic Family (T)</h4>
+          <p><strong>Chords:</strong> I, iii, vi</p>
+          <p>Rest, home, resolution. The submediant (vi) and mediant (iii) share two pitch classes with I and act as soft tonic substitutes.</p>
+        </div>
+
+        <div class="theory-pill s">
+          <h4>Subdominant Family (S)</h4>
+          <p><strong>Chords:</strong> ii, IV</p>
+          <p>Departure, pre-dominant forward motion. Both contain scale degree 4, naturally pulling toward the dominant.</p>
+        </div>
+
+        <div class="theory-pill d">
+          <h4>Dominant Family (D)</h4>
+          <p><strong>Chords:</strong> V, vii°</p>
+          <p>Tension and tonal drive. Both contain the leading tone (scale degree 7) and scale degree 2, urgently demanding resolution to the tonic.</p>
+        </div>
+      </div>
+
+      <div style="background: var(--surface-subtle); padding: 12px; border-radius: var(--radius); margin-top: 6px;">
+        <h4 style="font-family: var(--font-serif); font-size: 0.88rem; color: var(--text); margin-bottom: 3px;">Smooth Voice Leading (Nearest Inversions)</h4>
+        <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.5;">
+          Common tones are retained in the same register while moving voices step by minimal intervals (semitones or whole tones). A grounded bass line in the baritone register (F2 to G3) defines the functional root without sub-bass distraction.
+        </p>
+        <p style="margin-top: 8px; font-size: 0.8rem;">
+          <a href="about.html" target="_blank" style="color: var(--text); font-weight: 600; text-decoration: underline;">Read Full Teacher Reference & Pedagogical Notes →</a>
+        </p>
+      </div>
+    </div>
+  </details>
+
+</div>
+
+<script>
+/* ========================================================================
+   1. MUSIC THEORY DEFINITIONS & DATA
+   ======================================================================== */
+
+const ROOT_PITCHES = {
+  "C": 60, "G": 55, "D": 62, "A": 57, "E": 64,
+  "F": 65, "Bb": 58, "Eb": 63, "Ab": 56
+};
+
+// Diatonic Triads relative to Major root (intervals in semitones)
+// family: T = Tonic, S = Subdominant, D = Dominant
+const DIATONIC_CHORDS = [
+  { rn: "I",    name: "I (Tonic)",            degree: 0, intervals: [0, 4, 7],   family: "T", quality: "Major",
+    reason: "The central tonic chord. Purest harmonic rest and stability." },
+  { rn: "ii",   name: "ii (Supertonic)",      degree: 1, intervals: [2, 5, 9],   family: "S", quality: "minor",
+    reason: "Subdominant / Pre-dominant family. Contains scale degree 4, naturally pulling to V." },
+  { rn: "iii",  name: "iii (Mediant)",        degree: 2, intervals: [4, 7, 11],  family: "T", quality: "minor",
+    reason: "Tonic family. Shares scale degrees 3 and 5 with I, providing a gentle tonic substitute." },
+  { rn: "IV",   name: "IV (Subdominant)",     degree: 3, intervals: [5, 9, 12],  family: "S", quality: "Major",
+    reason: "Subdominant archetype. Moves away from tonic stability and sets up dominant tension." },
+  { rn: "V",    name: "V (Dominant)",         degree: 4, intervals: [7, 11, 14], family: "D", quality: "Major",
+    reason: "Dominant archetype. Contains leading tone (scale degree 7) pulling urgently to 1." },
+  { rn: "vi",   name: "vi (Submediant)",      degree: 5, intervals: [9, 12, 16], family: "T", quality: "minor",
+    reason: "Tonic family. Shares scale degrees 1 and 3 with I, standard deceptive cadence destination." },
+  { rn: "vii°", name: "vii° (Leading Tone)",  degree: 6, intervals: [11, 14, 17], family: "D", quality: "diminished",
+    reason: "Dominant family. Diminished triad containing the leading tone and tritone pulling to I." }
+];
+
+const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const FLAT_NOTE_NAMES = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
+
+const KEY_SIGNATURE_FLATS = ["F", "Bb", "Eb", "Ab"];
+
+function midiToNoteName(midiNumber, keyName = "C") {
+  const useFlats = KEY_SIGNATURE_FLATS.includes(keyName);
+  const pc = midiNumber % 12;
+  const octave = Math.floor(midiNumber / 12) - 1;
+  const name = useFlats ? FLAT_NOTE_NAMES[pc] : NOTE_NAMES[pc];
+  return name + octave;
+}
+
+function midiToPitchClass(midiNumber, keyName = "C") {
+  const useFlats = KEY_SIGNATURE_FLATS.includes(keyName);
+  const pc = midiNumber % 12;
+  return useFlats ? FLAT_NOTE_NAMES[pc] : NOTE_NAMES[pc];
+}
+
+/* ========================================================================
+   2. SMOOTH VOICE LEADING ENGINE (NEAREST INVERSIONS)
+   ======================================================================== */
+
+/**
+ * Finds the voicing for 3 upper voices [w1 < w2 < w3] that minimizes
+ * total voice displacement sum((w_i - prev_i)^2) from previous voices.
+ */
+function findBestUpperVoicing(prevVoices, targetPitchClasses, centerMidi = 63) {
+  const pcs = targetPitchClasses;
+  let bestVoicing = null;
+  let bestCost = Infinity;
+
+  // Search upper voices in comfortable keyboard treble range (MIDI 55 to 74)
+  for (let n1 = 55; n1 <= 72; n1++) {
+    if (!pcs.includes(n1 % 12)) continue;
+    for (let n2 = n1 + 1; n2 <= n1 + 9; n2++) {
+      if (!pcs.includes(n2 % 12) || n2 % 12 === n1 % 12) continue;
+      for (let n3 = n2 + 1; n3 <= n2 + 9; n3++) {
+        if (!pcs.includes(n3 % 12) || n3 % 12 === n1 % 12 || n3 % 12 === n2 % 12) continue;
+
+        const w = [n1, n2, n3];
+        const span = n3 - n1;
+        // Natural keyboard spacing: all 3 upper voices must fit in a single hand (span <= 12, ideally <= 9)
+        if (span > 12) continue;
+
+        let cost = 0;
+        if (prevVoices && prevVoices.length === 3) {
+          for (let i = 0; i < 3; i++) {
+            cost += Math.pow(w[i] - prevVoices[i], 2);
+          }
+        }
+        // Penalize wide hand stretches
+        cost += 0.4 * Math.max(0, span - 9);
+        // Centering pull toward middle treble (around Middle C / D4)
+        const avg = (n1 + n2 + n3) / 3;
+        cost += 0.15 * Math.pow(avg - centerMidi, 2);
+
+        if (cost < bestCost) {
+          bestCost = cost;
+          bestVoicing = w;
+        }
+      }
+    }
+  }
+  return bestVoicing || [60, 64, 67];
+}
+
+/**
+ * Finds the bass note for the root that moves smoothly within octave 2-3 (MIDI 41 to 55).
+ */
+function findBestBass(prevBass, targetPc, minMidi = 41, maxMidi = 55) {
+  const candidates = [];
+  for (let m = minMidi; m <= maxMidi; m++) {
+    if (m % 12 === targetPc) candidates.push(m);
+  }
+  if (!candidates.length) return 48;
+  if (!prevBass) {
+    // Choose candidate closest to middle C3 (MIDI 48)
+    return candidates.reduce((prev, curr) => Math.abs(curr - 48) < Math.abs(prev - 48) ? curr : prev);
+  }
+  let best = candidates[0];
+  let minDiff = Infinity;
+  for (const c of candidates) {
+    const diff = Math.abs(c - prevBass);
+    if (diff < minDiff) {
+      minDiff = diff;
+      best = c;
+    }
+  }
+  return best;
+}
+
+/* ========================================================================
+   3. AUDIO SYNTHESIS ENGINE (Tone.js Dedicated Acoustic Engine)
+   ======================================================================== */
+
+let audioInitialized = false;
+let upperSynth = null;
+let bassSynth = null;
+let masterLimiter = null;
+let masterVol = null;
+let toneReverb = null;
+let toneFilter = null;
+let bassFilter = null;
+let activePlaybackTimers = [];
+
+async function initAudio() {
+  if (audioInitialized) return;
+  try {
+    if (window.Tone) {
+      await Tone.start();
+
+      // Master limiter to eliminate digital clipping
+      masterLimiter = new Tone.Limiter(-1).toDestination();
+      masterVol = new Tone.Volume(-8).connect(masterLimiter);
+
+      // Warm acoustic lowpass filter & subtle hall space for upper voices
+      toneFilter = new Tone.Filter({
+        frequency: 2200,
+        type: "lowpass",
+        rolloff: -12
+      }).connect(masterVol);
+
+      toneReverb = new Tone.Reverb({
+        decay: 1.5,
+        preDelay: 0.01,
+        wet: 0.18
+      }).connect(toneFilter);
+
+      // Upper voices synth (pure triangle wave, Rhodes/piano acoustic character)
+      upperSynth = new Tone.PolySynth(Tone.Synth, {
+        maxPolyphony: 12,
+        volume: 0,
+        oscillator: {
+          type: "triangle"
+        },
+        envelope: {
+          attack: 0.014, // 14ms smooth attack prevents transient clicks
+          decay: 2.1,
+          sustain: 0.18,
+          release: 0.9
+        }
+      }).connect(toneReverb);
+
+      // Dedicated baritone bass synth (pure fundamental sine, 520Hz filter, zero clank or overdrive)
+      bassFilter = new Tone.Filter({
+        frequency: 520,
+        type: "lowpass",
+        rolloff: -12
+      }).connect(masterVol);
+
+      bassSynth = new Tone.PolySynth(Tone.Synth, {
+        maxPolyphony: 4,
+        volume: -1,
+        oscillator: {
+          type: "sine"
+        },
+        envelope: {
+          attack: 0.030, // 30ms anti-click ramp
+          decay: 2.3,
+          sustain: 0.25,
+          release: 1.0
+        }
+      }).connect(bassFilter);
+
+      await toneReverb.generate();
+    }
+    audioInitialized = true;
+    const banner = document.getElementById("audio-banner");
+    if (banner) banner.classList.add("hidden");
+  } catch (err) {
+    console.warn("Audio init deferred or failed:", err);
+  }
+}
+
+function initAudioUserGesture() {
+  initAudio();
+}
+document.addEventListener("click", () => { if (!audioInitialized) initAudio(); }, { once: true });
+document.addEventListener("keydown", () => { if (!audioInitialized) initAudio(); }, { once: true });
+
+function stopAllPlayback() {
+  // Clear any scheduled JS timeouts
+  activePlaybackTimers.forEach(id => clearTimeout(id));
+  activePlaybackTimers = [];
+
+  // Stop Tone.js notes cleanly
+  if (upperSynth) {
+    try { upperSynth.releaseAll(); } catch (e) {}
+  }
+  if (bassSynth) {
+    try { bassSynth.releaseAll(); } catch (e) {}
+  }
+
+  // Remove playing highlights
+  document.querySelectorAll(".active-playing, .active-sound").forEach(el => {
+    el.classList.remove("active-playing", "active-sound");
+  });
+  clearPianoHighlights();
+}
+
+/**
+ * Play a voiced chord (array of MIDI numbers) with acoustic envelope and voice balancing.
+ */
+function playMidiChord(midiNotes, durationSec, bassMidi = null) {
+  if (!audioInitialized) initAudio();
+
+  const allNotes = [...midiNotes];
+  if (bassMidi !== null && !allNotes.includes(bassMidi)) {
+    allNotes.unshift(bassMidi);
+  }
+
+  // Visual piano highlight (illuminates keys if user opens the drawer)
+  highlightPianoNotes(allNotes, bassMidi);
+  setTimeout(() => {
+    clearPianoHighlights();
+  }, Math.max(300, durationSec * 800));
+
+  if (upperSynth && bassSynth) {
+    // Dynamic voice weighting to eliminate chord-slab effect:
+    // Tenor: 0.58, Alto: 0.52, Soprano: 0.55
+    const upperVoicesMidi = allNotes.filter(m => m !== bassMidi).sort((a, b) => a - b);
+    const weights = [0.58, 0.52, 0.55];
+
+    upperVoicesMidi.forEach((m, idx) => {
+      const noteStr = Tone.Frequency(m, "midi").toNote();
+      const vel = weights[idx] !== undefined ? weights[idx] : 0.55;
+      upperSynth.triggerAttackRelease(noteStr, durationSec, undefined, vel);
+    });
+
+    // Grounded bass root
+    if (bassMidi !== null) {
+      const bassString = Tone.Frequency(bassMidi, "midi").toNote();
+      bassSynth.triggerAttackRelease(bassString, durationSec, undefined, 0.66);
+    }
+  }
+}
+
+/* ========================================================================
+   4. APPLICATION STATE & EXERCISE GENERATION
+   ======================================================================== */
+
+const STATE = {
+  currentKeyName: "C",
+  currentRootMidi: 60,
+  progressionStyle: "syntactic",
+  tempoBpm: 75,
+  stage2Enabled: false,
+
+  // Tonic anchor definition
+  tonicAnchor: null,
+
+  // Progression definition: 3 chords
+  progression: [],
+
+  // User selections: array of 3
+  userGuesses: [
+    { familyGuess: null, rnGuess: null },
+    { familyGuess: null, rnGuess: null },
+    { familyGuess: null, rnGuess: null }
+  ],
+
+  // Stats
+  completedCount: 0,
+  correctStage1Chords: 0,
+  totalStage1Chords: 0,
+  currentStreak: 0
+};
+
+// Preset musical progression templates (diatonic syntax with functional variety)
+const PROGRESSION_PATTERNS = [
+  ["I", "IV", "V"],     // T -> S -> D
+  ["ii", "V", "I"],     // S -> D -> T
+  ["I", "vi", "IV"],    // T -> T -> S
+  ["IV", "V", "vi"],    // S -> D -> T (deceptive)
+  ["vi", "ii", "V"],    // T -> S -> D
+  ["I", "iii", "IV"],   // T -> T -> S
+  ["IV", "vii°", "I"],  // S -> D -> T
+  ["I", "ii", "V"],     // T -> S -> D
+  ["vi", "IV", "V"],    // T -> S -> D
+  ["iii", "vi", "ii"],  // T -> T -> S
+  ["ii", "vii°", "I"],  // S -> D -> T
+  ["I", "V", "vi"],     // T -> D -> T
+  ["IV", "I", "V"],     // S -> T -> D
+  ["vi", "V", "I"],     // T -> D -> T
+  ["ii", "IV", "V"]     // S -> S -> D
+];
+
+function getChordDefByRN(rn) {
+  return DIATONIC_CHORDS.find(c => c.rn === rn);
+}
+
+/**
+ * Builds the clean Tonic anchor chord (I) in the chosen key.
+ */
+function buildTonicVoicing(rootMidi, keyName) {
+  const def = getChordDefByRN("I");
+  const targetPcs = def.intervals.map(i => (rootMidi + i) % 12);
+  const upperVoices = findBestUpperVoicing(null, targetPcs, 62);
+  const bass = findBestBass(null, (rootMidi + def.intervals[0]) % 12);
+
+  return {
+    rn: def.rn,
+    def: def,
+    upperVoices: upperVoices,
+    bass: bass,
+    targetPcs: targetPcs
+  };
+}
+
+/**
+ * Builds the 3-chord diatonic progression with smooth voice leading from tonic anchor.
+ */
+function buildProgressionVoicings(initialVoicing, rootMidi, keyName) {
+  let selectedRNs = [];
+
+  if (STATE.progressionStyle === "syntactic") {
+    // Pick from musically realistic patterns
+    const pattern = PROGRESSION_PATTERNS[Math.floor(Math.random() * PROGRESSION_PATTERNS.length)];
+    selectedRNs = [...pattern];
+  } else {
+    // Purely random diatonic chords from I to vii° (avoiding 3 identical)
+    for (let i = 0; i < 3; i++) {
+      let candidate;
+      do {
+        candidate = DIATONIC_CHORDS[Math.floor(Math.random() * DIATONIC_CHORDS.length)].rn;
+      } while (i > 0 && candidate === selectedRNs[i - 1]);
+      selectedRNs.push(candidate);
+    }
+  }
+
+  const chords = [];
+  let prevVoices = initialVoicing ? initialVoicing.upperVoices : null;
+  let prevBass = initialVoicing ? initialVoicing.bass : null;
+
+  selectedRNs.forEach(rn => {
+    const def = getChordDefByRN(rn);
+    const targetPcs = def.intervals.map(i => (rootMidi + i) % 12);
+    const upperVoices = findBestUpperVoicing(prevVoices, targetPcs, 62);
+    const bass = findBestBass(prevBass, (rootMidi + def.intervals[0]) % 12);
+
+    chords.push({
+      rn: def.rn,
+      def: def,
+      upperVoices: upperVoices,
+      bass: bass,
+      targetPcs: targetPcs
+    });
+
+    prevVoices = upperVoices;
+    prevBass = bass;
+  });
+
+  return chords;
+}
+
+function generateNewExercise(autoPlay = true) {
+  stopAllPlayback();
+
+  // Resolve random key if selected
+  const keyDropdown = document.getElementById("key-select").value;
+  if (keyDropdown === "random") {
+    const keys = Object.keys(ROOT_PITCHES);
+    STATE.currentKeyName = keys[Math.floor(Math.random() * keys.length)];
+  } else {
+    STATE.currentKeyName = keyDropdown;
+  }
+  STATE.currentRootMidi = ROOT_PITCHES[STATE.currentKeyName];
+
+  // 1. Build Tonic Anchor (I)
+  STATE.tonicAnchor = buildTonicVoicing(STATE.currentRootMidi, STATE.currentKeyName);
+
+  // 2. Build 3-Chord Progression with smooth voice leading from tonic anchor
+  STATE.progression = buildProgressionVoicings(STATE.tonicAnchor, STATE.currentRootMidi, STATE.currentKeyName);
+
+  // Reset user guess state
+  STATE.userGuesses = [
+    { familyGuess: null, rnGuess: null },
+    { familyGuess: null, rnGuess: null },
+    { familyGuess: null, rnGuess: null }
+  ];
+
+  resetUI();
+  updateTimelineDisplay();
+
+  if (autoPlay) {
+    // Schedule sequence playback after a tiny DOM render breather
+    setTimeout(() => {
+      playSequence();
+    }, 150);
+  }
+}
+
+/* ========================================================================
+   5. PLAYBACK SCHEDULER & REAL-TIME HIGHLIGHTS
+   ======================================================================== */
+
+function getChordDuration() {
+  // Duration in seconds per chord based on BPM
+  const beatSec = 60 / STATE.tempoBpm;
+  return beatSec * 1.5; // ~1.2s at 75 BPM
+}
+
+function playSequence() {
+  stopAllPlayback();
+
+  const chordDur = getChordDuration();
+  const tonicDur = Math.max(1.4, chordDur * 1.15); // Clear sustained tonic chord
+  const pauseDur = 1.1; // Silence between tonic anchor and test progression
+  let currentDelay = 0;
+
+  // 1. Play Tonic Anchor
+  const tonicTimer = setTimeout(() => {
+    document.getElementById("node-anchor").classList.add("active-playing");
+    playMidiChord(STATE.tonicAnchor.upperVoices, tonicDur * 0.95, STATE.tonicAnchor.bass);
+  }, currentDelay * 1000);
+  activePlaybackTimers.push(tonicTimer);
+  currentDelay += tonicDur;
+
+  // Pause
+  const pauseTimer = setTimeout(() => {
+    document.getElementById("node-anchor").classList.remove("active-playing");
+    document.getElementById("node-pause").classList.add("active-playing");
+  }, currentDelay * 1000);
+  activePlaybackTimers.push(pauseTimer);
+  currentDelay += pauseDur;
+
+  const endPauseTimer = setTimeout(() => {
+    document.getElementById("node-pause").classList.remove("active-playing");
+  }, currentDelay * 1000);
+  activePlaybackTimers.push(endPauseTimer);
+
+  // 2. Play 3-Chord Progression (with 25ms legato overlap simulating acoustic pedal connection)
+  STATE.progression.forEach((chord, i) => {
+    const timer = setTimeout(() => {
+      // Highlight timeline & card
+      document.querySelectorAll(".timeline-node").forEach(n => n.classList.remove("active-playing"));
+      document.getElementById(`node-chord-${i}`).classList.add("active-playing");
+      
+      document.querySelectorAll(".chord-card").forEach(c => c.classList.remove("active-sound"));
+      document.getElementById(`card-chord-${i}`).classList.add("active-sound");
+
+      playMidiChord(chord.upperVoices, chordDur + 0.025, chord.bass);
+    }, currentDelay * 1000);
+    activePlaybackTimers.push(timer);
+    currentDelay += chordDur;
+  });
+
+  // Cleanup highlights after sequence finishes
+  const finishTimer = setTimeout(() => {
+    document.querySelectorAll(".active-playing, .active-sound").forEach(el => {
+      el.classList.remove("active-playing", "active-sound");
+    });
+  }, currentDelay * 1000);
+  activePlaybackTimers.push(finishTimer);
+}
+
+function playAnchorOnly() {
+  stopAllPlayback();
+  if (!STATE.tonicAnchor) {
+    STATE.tonicAnchor = buildTonicVoicing(STATE.currentRootMidi, STATE.currentKeyName);
+  }
+
+  const tonicDur = Math.max(1.5, getChordDuration() * 1.2);
+  const node = document.getElementById("node-anchor");
+  node.classList.add("active-playing");
+
+  playMidiChord(STATE.tonicAnchor.upperVoices, tonicDur, STATE.tonicAnchor.bass);
+
+  const finishTimer = setTimeout(() => {
+    node.classList.remove("active-playing");
+  }, tonicDur * 1000);
+  activePlaybackTimers.push(finishTimer);
+}
+
+function playProgressionOnly() {
+  stopAllPlayback();
+  const chordDur = getChordDuration();
+  let currentDelay = 0;
+
+  STATE.progression.forEach((chord, i) => {
+    const timer = setTimeout(() => {
+      document.querySelectorAll(".timeline-node").forEach(n => n.classList.remove("active-playing"));
+      document.getElementById(`node-chord-${i}`).classList.add("active-playing");
+
+      document.querySelectorAll(".chord-card").forEach(c => c.classList.remove("active-sound"));
+      document.getElementById(`card-chord-${i}`).classList.add("active-sound");
+
+      playMidiChord(chord.upperVoices, chordDur + 0.025, chord.bass);
+    }, currentDelay * 1000);
+    activePlaybackTimers.push(timer);
+    currentDelay += chordDur;
+  });
+
+  const finishTimer = setTimeout(() => {
+    document.querySelectorAll(".active-playing, .active-sound").forEach(el => {
+      el.classList.remove("active-playing", "active-sound");
+    });
+  }, currentDelay * 1000);
+  activePlaybackTimers.push(finishTimer);
+}
+
+function playSingleChord(chordIndex) {
+  stopAllPlayback();
+  const chord = STATE.progression[chordIndex];
+  if (!chord) return;
+
+  const card = document.getElementById(`card-chord-${chordIndex}`);
+  const node = document.getElementById(`node-chord-${chordIndex}`);
+  card.classList.add("active-sound");
+  node.classList.add("active-playing");
+
+  playMidiChord(chord.upperVoices, 1.8, chord.bass);
+
+  setTimeout(() => {
+    card.classList.remove("active-sound");
+    node.classList.remove("active-playing");
+  }, 1800);
+}
+
+/* ========================================================================
+   6. USER INTERACTION & STAGE GUESSING
+   ======================================================================== */
+
+function selectFamily(chordIndex, family) {
+  STATE.userGuesses[chordIndex].familyGuess = family;
+
+  const card = document.getElementById(`card-chord-${chordIndex}`);
+  const buttons = card.querySelectorAll(".family-btn");
+
+  buttons.forEach(btn => {
+    btn.classList.remove("selected-t", "selected-s", "selected-d", "btn-correct-choice", "btn-wrong-choice", "btn-actual-target");
+    if (btn.dataset.fam === family) {
+      if (family === "T") btn.classList.add("selected-t");
+      if (family === "S") btn.classList.add("selected-s");
+      if (family === "D") btn.classList.add("selected-d");
+    }
+  });
+}
+
+function selectRomanNumeral(chordIndex, rn) {
+  STATE.userGuesses[chordIndex].rnGuess = rn;
+
+  const grid = document.getElementById(`roman-grid-${chordIndex}`);
+  grid.querySelectorAll(".roman-btn").forEach(btn => {
+    btn.classList.remove("btn-correct-choice", "btn-wrong-choice", "btn-actual-target");
+    btn.classList.toggle("active-rn", btn.dataset.rn === rn);
+  });
+}
+
+function submitAnswers() {
+  // Check if user has answered all 3 chords for Stage 1
+  const missingStage1 = STATE.userGuesses.some(g => !g.familyGuess);
+  if (missingStage1) {
+    alert("Please select a functional family (Tonic, Subdominant, or Dominant) for all 3 chords!");
+    return;
+  }
+
+  // If Stage 2 is toggled on, check if Roman numerals are selected
+  if (STATE.stage2Enabled) {
+    const missingStage2 = STATE.userGuesses.some(g => !g.rnGuess);
+    if (missingStage2) {
+      alert("Please select the exact Roman numeral for all 3 chords, or turn off Stage 2 toggle.");
+      return;
+    }
+  }
+
+  revealAnswers(false);
+}
+
+function revealAnswers(isDirectReveal = false) {
+  let allCorrectStage1 = true;
+  let allCorrectStage2 = true;
+
+  STATE.progression.forEach((chord, i) => {
+    const guess = STATE.userGuesses[i];
+    const actualFam = chord.def.family;
+    const actualRN = chord.def.rn;
+    const hasGuess = Boolean(guess.familyGuess);
+    const isFamCorrect = hasGuess && (guess.familyGuess === actualFam);
+    if (!isFamCorrect) allCorrectStage1 = false;
+
+    // Card boundary feedback
+    const card = document.getElementById(`card-chord-${i}`);
+    if (card) {
+      card.classList.remove("card-correct", "card-incorrect");
+      if (hasGuess) {
+        card.classList.add(isFamCorrect ? "card-correct" : "card-incorrect");
+      }
+    }
+
+    // Function Stage 1 header badge
+    const badgeFam = document.getElementById(`badge-fam-${i}`);
+    if (badgeFam) {
+      if (!hasGuess && isDirectReveal) {
+        badgeFam.innerHTML = `<span class="verdict-pill verdict-revealed">Revealed</span>`;
+      } else if (isFamCorrect) {
+        badgeFam.innerHTML = `<span class="verdict-pill verdict-correct">✓ Correct</span>`;
+      } else {
+        badgeFam.innerHTML = `<span class="verdict-pill verdict-incorrect">✗ Incorrect</span>`;
+      }
+    }
+
+    // Highlight family buttons
+    if (card) {
+      const famButtons = card.querySelectorAll(".family-btn");
+      famButtons.forEach(btn => {
+        btn.classList.remove("btn-correct-choice", "btn-wrong-choice", "btn-actual-target");
+        if (btn.dataset.fam === actualFam && !isFamCorrect) {
+          btn.classList.add("btn-actual-target");
+        }
+        if (btn.dataset.fam === guess.familyGuess) {
+          btn.classList.add(isFamCorrect ? "btn-correct-choice" : "btn-wrong-choice");
+        }
+      });
+    }
+
+    // Feedback Element
+    const fbBox = document.getElementById(`feedback-${i}`);
+    fbBox.classList.remove("hidden", "correct", "incorrect", "revealed");
+    if (!hasGuess && isDirectReveal) {
+      fbBox.classList.add("revealed");
+    } else {
+      fbBox.classList.add(isFamCorrect ? "correct" : "incorrect");
+    }
+
+    const fbTitle = document.getElementById(`feedback-title-${i}`);
+    const fbDesc = document.getElementById(`feedback-desc-${i}`);
+    const fbNotes = document.getElementById(`feedback-notes-${i}`);
+
+    const famNameMap = { "T": "Tonic", "S": "Subdominant", "D": "Dominant" };
+
+    // Format pitch classes
+    const noteNamesString = chord.def.intervals.map(inter => {
+      return midiToPitchClass(STATE.currentRootMidi + inter, STATE.currentKeyName);
+    }).join(" - ");
+
+    const bassNoteName = midiToNoteName(chord.bass, STATE.currentKeyName);
+
+    if (isFamCorrect) {
+      fbTitle.innerHTML = `
+        <div class="feedback-status-row">
+          <span class="feedback-tag tag-correct">✓ Correct</span>
+          <span class="feedback-headline">${actualRN} · ${famNameMap[actualFam]}</span>
+        </div>`;
+      fbDesc.className = "feedback-desc-text";
+      fbDesc.innerText = chord.def.reason;
+    } else if (!hasGuess && isDirectReveal) {
+      fbTitle.innerHTML = `
+        <div class="feedback-status-row">
+          <span class="feedback-tag tag-revealed">Revealed</span>
+          <span class="feedback-headline">${actualRN} · ${famNameMap[actualFam]}</span>
+        </div>`;
+      fbDesc.className = "feedback-desc-text";
+      fbDesc.innerText = chord.def.reason;
+    } else {
+      const yourFamName = guess.familyGuess ? famNameMap[guess.familyGuess] : "Unanswered";
+      fbTitle.innerHTML = `
+        <div class="feedback-status-row">
+          <span class="feedback-tag tag-incorrect">✗ Incorrect</span>
+          <span class="feedback-headline">${actualRN} · ${famNameMap[actualFam]}</span>
+          <span class="feedback-guess-note">(Chosen: ${yourFamName})</span>
+        </div>`;
+      fbDesc.className = "feedback-desc-text";
+      fbDesc.innerText = chord.def.reason;
+    }
+
+    fbNotes.innerHTML = `Chord: ${actualRN} (${chord.def.quality}) · Notes: ${noteNamesString} · Bass: ${bassNoteName}`;
+
+    // Update timeline label with actual Roman numeral
+    document.getElementById(`timeline-c${i}-text`).innerHTML = `${actualRN} <span style="font-size: 0.72rem; opacity: 0.75">(${actualFam})</span>`;
+
+    // Stage 2 feedback if enabled
+    if (STATE.stage2Enabled) {
+      const hasRNGuess = Boolean(guess.rnGuess);
+      const isRNCorrect = hasRNGuess && (guess.rnGuess === actualRN);
+      if (!isRNCorrect) allCorrectStage2 = false;
+
+      const badgeRN = document.getElementById(`badge-rn-${i}`);
+      if (badgeRN) {
+        if (!hasRNGuess && isDirectReveal) {
+          badgeRN.innerHTML = `<span class="verdict-pill verdict-revealed">${actualRN}</span>`;
+        } else if (isRNCorrect) {
+          badgeRN.innerHTML = `<span class="verdict-pill verdict-correct">✓ ${actualRN}</span>`;
+        } else {
+          badgeRN.innerHTML = `<span class="verdict-pill verdict-incorrect">✗ Actual: ${actualRN}</span>`;
+        }
+      }
+
+      const rnGrid = document.getElementById(`roman-grid-${i}`);
+      if (rnGrid) {
+        rnGrid.querySelectorAll(".roman-btn").forEach(btn => {
+          btn.classList.remove("btn-correct-choice", "btn-wrong-choice", "btn-actual-target");
+          if (btn.dataset.rn === actualRN && !isRNCorrect) {
+            btn.classList.add("btn-actual-target");
+          }
+          if (btn.dataset.rn === guess.rnGuess) {
+            btn.classList.add(isRNCorrect ? "btn-correct-choice" : "btn-wrong-choice");
+          }
+        });
+      }
+    }
+  });
+
+  // Update Stats
+  if (!isDirectReveal) {
+    STATE.completedCount++;
+    const correctCountThisRound = STATE.progression.filter((c, idx) => STATE.userGuesses[idx].familyGuess === c.def.family).length;
+    STATE.correctStage1Chords += correctCountThisRound;
+    STATE.totalStage1Chords += 3;
+
+    if (allCorrectStage1 && (!STATE.stage2Enabled || allCorrectStage2)) {
+      STATE.currentStreak++;
+    } else {
+      STATE.currentStreak = 0;
+    }
+
+    updateStatsDisplay();
+  }
+
+  // Update Action Bar buttons
+  document.getElementById("btn-submit").classList.add("hidden");
+  document.getElementById("btn-reveal-all").classList.add("hidden");
+  const promptStatus = document.getElementById("prompt-status");
+  promptStatus.innerHTML = allCorrectStage1
+    ? `<span style="color: var(--correct); font-weight: 500;">All three chords correctly identified.</span>`
+    : `<span style="color: var(--text-muted);">Review the functional resolutions and voicings above.</span>`;
+}
+
+function updateStatsDisplay() {
+  document.getElementById("stat-completed").innerText = STATE.completedCount;
+  if (STATE.totalStage1Chords > 0) {
+    const pct = Math.round((STATE.correctStage1Chords / STATE.totalStage1Chords) * 100);
+    document.getElementById("stat-accuracy").innerText = `${pct}%`;
+  }
+}
+
+function toggleTheme() {
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  const next = isDark ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  const btn = document.getElementById("theme-toggle-btn");
+  if (btn) btn.innerText = next === "dark" ? "Paper" : "Ebony";
+}
+
+/* ========================================================================
+   7. UI RENDERING & RESET
+   ======================================================================== */
+
+function resetUI() {
+  // Clear button selections and evaluation states
+  document.querySelectorAll(".family-btn").forEach(btn => {
+    btn.classList.remove("selected-t", "selected-s", "selected-d", "btn-correct-choice", "btn-wrong-choice", "btn-actual-target");
+  });
+
+  document.querySelectorAll(".roman-btn").forEach(btn => {
+    btn.classList.remove("active-rn", "btn-correct-choice", "btn-wrong-choice", "btn-actual-target");
+  });
+
+  // Hide feedback boxes and clear verdict pills
+  for (let i = 0; i < 3; i++) {
+    const card = document.getElementById(`card-chord-${i}`);
+    if (card) card.classList.remove("card-correct", "card-incorrect");
+
+    const fb = document.getElementById(`feedback-${i}`);
+    if (fb) {
+      fb.classList.remove("correct", "incorrect", "revealed");
+      fb.classList.add("hidden");
+    }
+    document.getElementById(`badge-fam-${i}`).innerHTML = "";
+    document.getElementById(`badge-rn-${i}`).innerHTML = "";
+    document.getElementById(`timeline-c${i}-text`).innerText = "—";
+  }
+
+  // Ensure keyboard drawer is closed by default so it does not give away notes
+  const drawer = document.getElementById("keyboard-drawer");
+  if (drawer) drawer.open = false;
+
+  document.getElementById("btn-submit").classList.remove("hidden");
+  document.getElementById("btn-reveal-all").classList.remove("hidden");
+  document.getElementById("prompt-status").innerText = "Assign each chord to its functional family, then check.";
+}
+
+function updateTimelineDisplay() {
+  document.getElementById("timeline-anchor-text").innerText = `Tonic I (${STATE.currentKeyName} Maj)`;
+}
+
+function onKeyChange() {
+  generateNewExercise(true);
+}
+
+function onProgressionStyleChange() {
+  STATE.progressionStyle = document.getElementById("progression-style").value;
+  generateNewExercise(true);
+}
+
+function onTempoChange(val) {
+  STATE.tempoBpm = parseInt(val, 10);
+  document.getElementById("tempo-val").innerText = `${val} BPM`;
+}
+
+function onStage2Toggle(enabled) {
+  STATE.stage2Enabled = enabled;
+  for (let i = 0; i < 3; i++) {
+    const box = document.getElementById(`stage2-box-${i}`);
+    if (enabled) {
+      box.classList.remove("hidden");
+    } else {
+      box.classList.add("hidden");
+    }
+  }
+}
+
+function buildRomanButtons() {
+  for (let i = 0; i < 3; i++) {
+    const grid = document.getElementById(`roman-grid-${i}`);
+    grid.innerHTML = "";
+    DIATONIC_CHORDS.forEach(chord => {
+      const btn = document.createElement("button");
+      btn.className = "roman-btn";
+      btn.dataset.rn = chord.rn;
+      btn.innerText = chord.rn;
+      btn.title = `${chord.rn} (${chord.quality})`;
+      btn.onclick = () => selectRomanNumeral(i, chord.rn);
+      grid.appendChild(btn);
+    });
+  }
+}
+
+/* ========================================================================
+   8. PIANO KEYBOARD VISUALIZER
+   ======================================================================== */
+
+const PIANO_START_MIDI = 36; // C2
+const PIANO_END_MIDI = 84;   // C6 (4 full octaves, ending on high C)
+
+function renderPianoKeyboard() {
+  const container = document.getElementById("piano-keyboard");
+  container.innerHTML = "";
+
+  const whiteKeys = [];
+
+  for (let m = PIANO_START_MIDI; m <= PIANO_END_MIDI; m++) {
+    const pc = m % 12;
+    const isBlack = [1, 3, 6, 8, 10].includes(pc);
+    if (!isBlack) {
+      whiteKeys.push(m);
+    }
+  }
+
+  const totalWhiteKeys = whiteKeys.length;
+
+  // Render White Keys
+  whiteKeys.forEach(m => {
+    const wk = document.createElement("div");
+    wk.className = "white-key";
+    wk.id = `key-midi-${m}`;
+    const name = midiToNoteName(m, "C");
+    // label C notes
+    if (name.startsWith("C")) {
+      wk.innerText = name;
+    }
+    wk.title = name;
+    wk.addEventListener("mousedown", () => {
+      playPreviewPitch(m);
+    });
+    container.appendChild(wk);
+  });
+
+  // Render Black Keys with exact percentage positioning locked to the white key seam
+  whiteKeys.forEach((m, wIndex) => {
+    const pc = m % 12;
+    // Keys followed by black key: C(0), D(2), F(5), G(7), A(9)
+    if ([0, 2, 5, 7, 9].includes(pc)) {
+      const blackMidi = m + 1;
+      if (blackMidi <= PIANO_END_MIDI) {
+        const bk = document.createElement("div");
+        bk.className = "black-key";
+        bk.id = `key-midi-${blackMidi}`;
+        // Centered directly on the boundary line between white keys with zero drift
+        bk.style.left = `${((wIndex + 1) / totalWhiteKeys) * 100}%`;
+        const bName = midiToNoteName(blackMidi, "C");
+        bk.title = bName;
+        bk.addEventListener("mousedown", (e) => {
+          e.stopPropagation();
+          playPreviewPitch(blackMidi);
+        });
+        container.appendChild(bk);
+      }
+    }
+  });
+}
+
+function playPreviewPitch(midi) {
+  initAudioUserGesture();
+  const isBass = (midi < 56);
+  playMidiChord([midi], 0.7, isBass ? midi : null);
+}
+
+function highlightPianoNotes(midiNotes, bassMidi) {
+  clearPianoHighlights();
+  midiNotes.forEach(m => {
+    const el = document.getElementById(`key-midi-${m}`);
+    if (el) {
+      if (m === bassMidi) {
+        el.classList.add("active-bass");
+      } else {
+        el.classList.add("active-voice");
+      }
+    }
+  });
+}
+
+function clearPianoHighlights() {
+  document.querySelectorAll(".active-voice, .active-bass").forEach(el => {
+    el.classList.remove("active-voice", "active-bass");
+  });
+}
+
+/* ========================================================================
+   9. KEYBOARD SHORTCUTS
+   ======================================================================== */
+
+document.addEventListener("keydown", (e) => {
+  // If user is inside an input or select, don't hijack
+  if (["INPUT", "SELECT"].includes(e.target.tagName)) return;
+
+  if (e.code === "Space") {
+    e.preventDefault();
+    playProgressionOnly();
+  } else if (e.key === "p" || e.key === "P") {
+    playSequence();
+  } else if (e.key === "a" || e.key === "A") {
+    playAnchorOnly();
+  } else if (e.key === "n" || e.key === "N") {
+    generateNewExercise(true);
+  } else if (e.key === "Enter") {
+    submitAnswers();
+  }
+});
+
+/* ========================================================================
+   10. INITIALIZATION
+   ======================================================================== */
+
+window.addEventListener("DOMContentLoaded", () => {
+  renderPianoKeyboard();
+  buildRomanButtons();
+  generateNewExercise(false); // don't autoplay until user gesture
+});
+</script>
+
+</body>
+</html>

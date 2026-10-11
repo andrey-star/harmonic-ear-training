@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teacher's Reference — Harmonic Ear Training</title>
+  <style>
+    :root {
+      --bg: #f8f7f4;
+      --surface: #ffffff;
+      --surface-subtle: #f2efe7;
+      --border: #dcd8ce;
+      --border-light: #eae7df;
+      --text: #1d1b18;
+      --text-muted: #69655c;
+      --tonic: #1b4d3e;
+      --tonic-bg: #eef5f1;
+      --subdominant: #7e4a1f;
+      --subdominant-bg: #f8f1ea;
+      --dominant: #782231;
+      --dominant-bg: #f8ecee;
+      --font-serif: "Iowan Old Style", "Palatino Linotype", "Palatino", "Georgia", serif;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "SF Mono", "Menlo", monospace;
+      --radius: 3px;
+    }
+
+    [data-theme="dark"] {
+      --bg: #141312;
+      --surface: #1b1a18;
+      --surface-subtle: #23221f;
+      --border: #33312c;
+      --border-light: #282622;
+      --text: #edeae2;
+      --text-muted: #969185;
+      --tonic: #88c5a0;
+      --tonic-bg: #16261d;
+      --subdominant: #dab082;
+      --subdominant-bg: #291e14;
+      --dominant: #d78896;
+      --dominant-bg: #291519;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 30px 20px 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 720px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+    }
+
+    a.back-link {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      text-decoration: none;
+    }
+    a.back-link:hover { color: var(--text); }
+
+    .theme-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 2px 8px;
+      border-radius: var(--radius);
+      font-size: 0.72rem;
+      cursor: pointer;
+    }
+
+    header h1 {
+      font-family: var(--font-serif);
+      font-size: 1.6rem;
+      font-weight: 600;
+    }
+    header p {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-top: 2px;
+    }
+
+    /* Q&A CARDS */
+    .qa-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .qa-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .qa-q {
+      font-family: var(--font-serif);
+      font-size: 0.98rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .qa-a {
+      font-size: 0.84rem;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .qa-a ul {
+      margin-top: 4px;
+      padding-left: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .qa-a li {
+      font-size: 0.83rem;
+    }
+
+    /* MINI PILLS */
+    .pill {
+      font-family: var(--font-serif);
+      font-weight: 600;
+      padding: 1px 5px;
+      border-radius: var(--radius);
+      font-size: 0.8rem;
+    }
+    .pill-t { background: var(--tonic-bg); color: var(--tonic); }
+    .pill-s { background: var(--subdominant-bg); color: var(--subdominant); }
+    .pill-d { background: var(--dominant-bg); color: var(--dominant); }
+
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      background: var(--surface-subtle);
+      padding: 1px 4px;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <nav>
+    <a href="index.html" class="back-link">← Back to Trainer</a>
+    <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">Ebony</button>
+  </nav>
+
+  <header>
+    <h1>Teacher’s Reference: Exercise & Theory Rules</h1>
+    <p>A quick 1-minute summary of the musical rules, chord vocabulary, and voicing engine.</p>
+  </header>
+
+  <div class="qa-list">
+
+    <div class="qa-card">
+      <div class="qa-q">1. What chords are in the vocabulary?</div>
+      <div class="qa-a">
+        All 7 diatonic triads in the chosen major key:
+        <ul>
+          <li><strong>I, ii, iii, IV, V, vi, vii°</strong> (triads only; no 7ths, inversions in bass, or chromaticism).</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="qa-card">
+      <div class="qa-q">2. How are the functional families categorized?</div>
+      <div class="qa-a">
+        Standard Riemannian three-function model:
+        <ul>
+          <li><span class="pill pill-t">Tonic (T)</span>: <strong>I</strong>, <strong>vi</strong> (submediant substitute), <strong>iii</strong> (mediant substitute).</li>
+          <li><span class="pill pill-s">Subdominant (S)</span>: <strong>IV</strong>, <strong>ii</strong> (supertonic pre-dominant). Both contain scale degree 4.</li>
+          <li><span class="pill pill-d">Dominant (D)</span>: <strong>V</strong>, <strong>vii°</strong> (leading-tone diminished). Both contain the leading tone (7).</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="qa-card">
+      <div class="qa-q">3. How are chords voiced? (Voice Leading)</div>
+      <div class="qa-a">
+        <strong>Pianistic close keyboard style</strong>, not chunky parallel root jumps and not wide choral spreads:
+        <ul>
+          <li><strong>Left Hand:</strong> Grounded bass note in baritone range (<code>F2</code> to <code>G3</code>, centered on <code>C3</code>).</li>
+          <li><strong>Right Hand:</strong> 3-voice close triad centered around Middle C (<code>span ≤ 9–12 semitones</code>, fits in one hand).</li>
+          <li><strong>Voice Leading:</strong> Common tones are strictly held in the same voice; moving voices step to the nearest chord tone (minimal distance algorithm).</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="qa-card">
+      <div class="qa-q">4. How does the exercise test the ear?</div>
+      <div class="qa-a">
+        Two-stage progressive breakdown:
+        <ul>
+          <li><strong>Tonic Anchor:</strong> Plays a clean root-position <strong>I</strong> chord to lock the pitch center, followed by a pause.</li>
+          <li><strong>Progression:</strong> Plays a 3-chord sequence.</li>
+          <li><strong>Stage 1 (Core):</strong> Identify the functional family for each chord (<strong>Tonic</strong>, <strong>Subdominant</strong>, or <strong>Dominant</strong>).</li>
+          <li><strong>Stage 2 (Optional Toggle):</strong> Identify the exact Roman numeral (<strong>I</strong> through <strong>vii°</strong>).</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="qa-card">
+      <div class="qa-q">5. Are the 3 chords picked randomly?</div>
+      <div class="qa-a">
+        The user can toggle between two modes in the header:
+        <ul>
+          <li><strong>Syntactic (Default):</strong> Picks from classical progression archetypes (e.g., <code>I–IV–V</code>, <code>ii–V–I</code>, <code>I–vi–IV</code>, <code>IV–V–vi</code>, <code>vi–ii–V</code>, <code>I–iii–IV</code>).</li>
+          <li><strong>Random Diatonic:</strong> Any 3 diatonic chords picked at random (without direct immediate repeats) for advanced exploration.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="qa-card">
+      <div class="qa-q">6. How does the synthesis avoid mechanical artifacts?</div>
+      <div class="qa-a">
+        <ul>
+          <li><strong>Voicing Balance:</strong> Bass has firm velocity (0.66), inner voices are softened (0.52–0.58) to blend, and soprano is not piercing (0.55).</li>
+          <li><strong>Acoustic Decay:</strong> Piano-like ADSR decay with 25ms legato overlap to simulate a damper pedal connection.</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  function toggleTheme() {
+    const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    const next = isDark ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    document.getElementById("theme-btn").innerText = next === "dark" ? "Paper" : "Ebony";
+    try { localStorage.setItem("ear_training_theme", next); } catch (e) {}
+  }
+  try {
+    const saved = localStorage.getItem("ear_training_theme");
+    if (saved) {
+      document.documentElement.setAttribute("data-theme", saved);
+      document.getElementById("theme-btn").innerText = saved === "dark" ? "Paper" : "Ebony";
+    }
+  } catch (e) {}
+</script>
+</body>
+</html>
