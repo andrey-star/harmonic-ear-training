@@ -1035,19 +1035,6 @@
       margin-bottom: 2px;
     }
 
-    /* AUDIO INIT BANNER */
-    #audio-banner {
-      background: var(--surface-subtle);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 10px 14px;
-      border-radius: var(--radius);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 0.82rem;
-    }
-
     .hidden {
       display: none !important;
     }
@@ -1056,12 +1043,6 @@
 <body>
 
 <div class="container">
-
-  <!-- AUDIO INITIALIZATION BANNER -->
-  <div id="audio-banner">
-    <span>Audio is suspended by browser. Click anywhere or press Enable Audio.</span>
-    <button class="btn" style="padding: 4px 10px;" onclick="initAudioUserGesture()">Enable Audio</button>
-  </div>
 
   <!-- HEADER -->
   <header>
@@ -1593,8 +1574,6 @@ async function initAudio() {
       await toneReverb.generate();
     }
     audioInitialized = true;
-    const banner = document.getElementById("audio-banner");
-    if (banner) banner.classList.add("hidden");
   } catch (err) {
     console.warn("Audio init deferred or failed:", err);
   }
