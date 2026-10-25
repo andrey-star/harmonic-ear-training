@@ -838,17 +838,25 @@
       color: var(--text-muted);
     }
 
-    /* PIANO KEYBOARD DRAWER (Closed by default) */
-    details.keyboard-drawer {
+    /* PIANO KEYBOARD & THEORY DRAWERS */
+    details.keyboard-drawer,
+    details.theory-drawer {
       border: 1px solid var(--border);
       border-radius: var(--radius);
       background: var(--surface);
       padding: 12px 16px;
       color: var(--text);
       font-size: 0.85rem;
+      transition: border-color 0.15s ease;
     }
 
-    details.keyboard-drawer summary {
+    details.keyboard-drawer:hover,
+    details.theory-drawer:hover {
+      border-color: var(--text-dim);
+    }
+
+    details.keyboard-drawer summary,
+    details.theory-drawer summary {
       cursor: pointer;
       font-family: var(--font-serif);
       font-weight: 600;
@@ -856,12 +864,61 @@
       user-select: none;
       color: var(--text);
       outline: none;
+      list-style: none;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 8px;
     }
 
-    details.keyboard-drawer summary:hover {
+    details.keyboard-drawer summary::-webkit-details-marker,
+    details.theory-drawer summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .summary-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .summary-title::before {
+      content: "▸";
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      display: inline-block;
+      transition: transform 0.15s ease;
+    }
+
+    details[open] > summary .summary-title::before {
+      transform: rotate(90deg);
+      color: var(--text);
+    }
+
+    .summary-toggle-hint {
+      font-family: var(--font-sans);
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 2px 8px;
+    }
+
+    details[open] > summary .summary-toggle-hint::before {
+      content: "Hide";
+    }
+
+    details:not([open]) > summary .summary-toggle-hint::before {
+      content: "Expand";
+    }
+
+    details.keyboard-drawer summary:hover,
+    details.theory-drawer summary:hover {
       color: var(--text-muted);
     }
 
@@ -1004,29 +1061,6 @@
     }
 
     /* THEORY TREATISE SECTION */
-    details.theory-drawer {
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      background: var(--surface);
-      padding: 14px 18px;
-      color: var(--text);
-      font-size: 0.85rem;
-    }
-
-    details.theory-drawer summary {
-      cursor: pointer;
-      font-family: var(--font-serif);
-      font-weight: 600;
-      font-size: 0.95rem;
-      user-select: none;
-      color: var(--text);
-      outline: none;
-    }
-
-    details.theory-drawer summary:hover {
-      color: var(--text-muted);
-    }
-
     .theory-content {
       padding-top: 12px;
       margin-top: 10px;
@@ -1424,7 +1458,10 @@
 
   <!-- KEYBOARD VOICING DRAWER (Closed by default) -->
   <details class="keyboard-drawer" id="keyboard-drawer">
-    <summary>Keyboard Voicing Display</summary>
+    <summary>
+      <span class="summary-title">Keyboard Voicing Display</span>
+      <span class="summary-toggle-hint"></span>
+    </summary>
     <div class="keyboard-drawer-content">
       <div class="visualizer-header">
         <span>Voicing Analysis (Bass in Terracotta, Upper Voices in Slate)</span>
@@ -1440,7 +1477,10 @@
 
   <!-- THEORY TREATISE SECTION -->
   <details class="theory-drawer">
-    <summary>Notes on Functional Harmony & Voice Leading</summary>
+    <summary>
+      <span class="summary-title">Notes on Functional Harmony & Voice Leading</span>
+      <span class="summary-toggle-hint"></span>
+    </summary>
     <div class="theory-content">
       <p>
         In functional tonal harmony (Hugo Riemann's system), every diatonic chord belongs to one of three primary functional archetypes:
