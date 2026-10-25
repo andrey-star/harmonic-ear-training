@@ -14,12 +14,7 @@
       --border-light: #eae7df;
       --text: #1d1b18;
       --text-muted: #69655c;
-      --tonic: #1b4d3e;
-      --tonic-bg: #eef5f1;
-      --subdominant: #7e4a1f;
-      --subdominant-bg: #f8f1ea;
-      --dominant: #782231;
-      --dominant-bg: #f8ecee;
+      --ink: #2c2823;
       --font-serif: "Iowan Old Style", "Palatino Linotype", "Palatino", "Georgia", serif;
       --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       --font-mono: "SF Mono", "Menlo", monospace;
@@ -34,12 +29,7 @@
       --border-light: #282622;
       --text: #edeae2;
       --text-muted: #969185;
-      --tonic: #88c5a0;
-      --tonic-bg: #16261d;
-      --subdominant: #dab082;
-      --subdominant-bg: #291e14;
-      --dominant: #d78896;
-      --dominant-bg: #291519;
+      --ink: #e5e0d5;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -155,13 +145,13 @@
     .pill {
       font-family: var(--font-serif);
       font-weight: 600;
-      padding: 1px 5px;
+      padding: 1px 6px;
       border-radius: var(--radius);
       font-size: 0.8rem;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      color: var(--ink);
     }
-    .pill-t { background: var(--tonic-bg); color: var(--tonic); }
-    .pill-s { background: var(--subdominant-bg); color: var(--subdominant); }
-    .pill-d { background: var(--dominant-bg); color: var(--dominant); }
 
     code {
       font-family: var(--font-mono);
@@ -182,7 +172,7 @@
 
   <header>
     <h1>Teacher’s Reference: Musical Assumptions & Design Trade-offs</h1>
-    <p>A concise overview of the harmonic model, voice-leading rules, and pedagogical simplifications built into this trainer.</p>
+    <p>A concise overview of the harmonic model, minor-key conventions, voice-leading rules, and pedagogical simplifications built into this trainer.</p>
   </header>
 
   <div class="qa-list">
@@ -191,64 +181,77 @@
       <div class="qa-q">1. Why are chords restricted to plain triads with roots in the bass (no V7, no bass inversions, no cadential 6/4)?</div>
       <div class="qa-a">
         <ul>
-          <li><strong>Why plain V instead of V7:</strong> When <code>V7</code> is used among triads, students quickly bypass functional listening by simply hunting for a 4-note chord or the 4–7 tritone. Keeping all seven chords as pure 3-note triads (<code>I, ii, iii, IV, V, vi, vii°</code>) forces the ear to judge harmonic gravity and bass relationship rather than chord density.</li>
+          <li><strong>Why plain V instead of V7:</strong> When <code>V7</code> is used among triads, students quickly bypass functional listening by simply hunting for a 4-note chord or the 4–7 tritone. Keeping all seven chords as pure 3-note triads (<code>I, ii, iii, IV, V, vi, vii°</code> in major; <code>i, ii°, III, iv, V, VI, vii°</code> in minor) forces the ear to judge harmonic gravity and bass relationship rather than chord density.</li>
           <li><strong>Why roots in the bass:</strong> The left hand plays scale degrees 1 through 7 in the baritone register so bass recognition maps 1:1 to the Roman numeral in Stage 2. Cadential <code>I6/4</code> is excluded here because its dominant bass (5) conflicts with its tonic upper tones (1, 3).</li>
         </ul>
       </div>
     </div>
 
     <div class="qa-card">
-      <div class="qa-q">2. How are chords voiced, and how does the engine handle part-writing?</div>
+      <div class="qa-q">2. Which minor scale is used for minor keys (natural, harmonic, or melodic)?</div>
+      <div class="qa-a">
+        Rather than forcing a single theoretical scale across all degrees, the trainer uses the standard <strong>classical composite functional minor</strong> taught in conservatory harmony:
+        <ul>
+          <li><strong>Harmonic minor for Dominant function (<code>V</code>, <code>vii°</code>):</strong> Scale degree 7 is raised (♯7) to create the leading tone, giving <code>V</code> a major triad quality and <code>vii°</code> a diminished triad quality so dominant resolution to <code>i</code> is unmistakably directional.</li>
+          <li><strong>Natural minor for Mediant (<code>III</code>):</strong> The mediant triad uses the unraised ♭7 (<code>III</code> major, the relative major triad) rather than the harsh harmonic-minor augmented triad (<code>III+</code>), which rarely functions as a simple diatonic mediant in foundational ear training.</li>
+          <li><strong>Subdominant & Tonic triads (<code>i</code>, <code>ii°</code>, <code>iv</code>, <code>VI</code>):</strong> Built with the natural ♭6 scale degree, yielding the characteristic minor tonic (<code>i</code>), minor subdominant (<code>iv</code>), half-diminished-prep triad (<code>ii°</code>), and warm major submediant (<code>VI</code>).</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="qa-card">
+      <div class="qa-q">3. How are chords voiced, and how does the engine handle part-writing in major and minor?</div>
       <div class="qa-a">
         <strong>4-part close keyboard style</strong> (1 bass note in the left hand + 3-note close triad within one hand's span in the right hand), rather than open SATB chorale spacing:
         <ul>
           <li><strong>Why close keyboard position:</strong> Wide SATB spacing encourages the ear to track individual contrapuntal lines. Tight right-hand voicings (<code>G3–C5</code>, span ≤ 9–12 semitones) fuse psychoacoustically into a single harmonic color while keeping a clear acoustic window above the bass (<code>E2–E3</code>).</li>
-          <li><strong>Part-writing constraints:</strong> Common tones are held in the exact same voice; moving voices step to the nearest chord tone. When the bass steps by 2nd (e.g., <code>IV → V</code> or <code>V → vi</code>), the right hand moves in <strong>contrary motion</strong> to prevent parallel 5ths and parallel octaves with the bass. On authentic <code>D → I</code> resolutions, the leading tone (7) resolves up by semitone to 1.</li>
+          <li><strong>Part-writing constraints:</strong> Common tones are held in the exact same voice; moving voices step to the nearest chord tone. When the bass steps by 2nd (e.g., <code>IV → V</code>, <code>iv → V</code>, or <code>V → VI</code>), the right hand moves in <strong>contrary motion</strong> to prevent parallel 5ths and parallel octaves with the bass. On authentic <code>D → T</code> resolutions, the leading tone (7) resolves up by semitone to 1.</li>
+          <li><strong>No augmented seconds in minor:</strong> In progressions moving between ♭6 and ♯7 (such as <code>iv → V</code>, <code>VI → V</code>, or <code>V → VI</code>), the voice-leading engine strictly forbids any upper voice from leaping across the 3-semitone augmented second (♭6 ↔ ♯7).</li>
         </ul>
         <div class="tradeoff-note">
-          <strong>Trade-off on vii°:</strong> In classical repertoire, <code>vii°</code> normally appears in first inversion (<code>vii°6</code>, scale degree 2 in the bass) to avoid doubling the leading tone. Here, <code>vii°</code> keeps scale degree 7 in the bass so that every chord preserves a consistent root-in-bass mapping when students transition to Stage 2.
+          <strong>Trade-off on vii° and ii°:</strong> In classical repertoire, <code>vii°</code> and <code>ii°</code> normally appear in first inversion (<code>vii°6</code>, <code>ii°6</code>) to soften the diminished fifth above the bass. Here, both retain their root in the bass so that every chord preserves a consistent 1:1 root-in-bass mapping when students transition to Stage 2.
         </div>
       </div>
     </div>
 
     <div class="qa-card">
-      <div class="qa-q">3. Why are vi and iii grouped under the Tonic (T) family?</div>
+      <div class="qa-q">4. How are the seven chords grouped into the three functional families in Stage 1?</div>
       <div class="qa-a">
-        Stage 1 uses Hugo Riemann's three-function taxonomy:
+        Stage 1 uses Hugo Riemann's three-function taxonomy across both modes:
         <ul>
-          <li><span class="pill pill-t">Tonic (T)</span>: <strong>I, vi, iii</strong> — Centers of rest and tonic prolongation (sharing two common tones with <code>I</code>).</li>
-          <li><span class="pill pill-s">Subdominant (S)</span>: <strong>IV, ii</strong> — Pre-dominant departure (both contain scale degree 4).</li>
-          <li><span class="pill pill-d">Dominant (D)</span>: <strong>V, vii°</strong> — Active tension (both contain the leading tone, 7).</li>
+          <li><span class="pill">Tonic (T)</span>: <strong>I, vi, iii</strong> (Major) / <strong>i, VI, III</strong> (Minor) — Centers of rest, tonic prolongation, and deceptive resolution (sharing two common tones with the tonic).</li>
+          <li><span class="pill">Subdominant (S)</span>: <strong>IV, ii</strong> (Major) / <strong>iv, ii°</strong> (Minor) — Pre-dominant departure (both contain scale degree 4).</li>
+          <li><span class="pill">Dominant (D)</span>: <strong>V, vii°</strong> (Major & Minor) — Active tension containing the leading tone (7 / ♯7) demanding resolution.</li>
         </ul>
         <div class="tradeoff-note">
-          <strong>Contextual nuance on iii:</strong> While the mediant (<code>iii</code>) can behave as a dominant preparation in some repertoire, in this trainer's syntactic corpus it is used strictly in its tonic-prolongation / descending-step role (<code>I–iii–IV</code>, <code>I–iii–vi</code>, <code>iii–vi–ii</code>).
+          <strong>Contextual nuance on iii / III:</strong> While the mediant can behave as a dominant preparation in some repertoire, in this trainer's syntactic corpus it is used in its tonic-prolongation and descending-step / circle-of-fifths roles (<code>I–iii–IV</code>, <code>i–III–iv</code>, <code>i–III–VI–V</code>, <code>i–VI–III–iv</code>).
         </div>
       </div>
     </div>
 
     <div class="qa-card">
-      <div class="qa-q">4. Why is the Tonic Anchor a single I chord rather than a full I–IV–V–I cadence?</div>
+      <div class="qa-q">5. How do 3-chord and 4-chord progressions work, and will students hear unidiomatic syntax like V → IV?</div>
       <div class="qa-a">
+        Students can choose <strong>3 Chords</strong> or <strong>4 Chords</strong> alongside two progression generators in the header:
         <ul>
-          <li><strong>Same-key drilling efficiency:</strong> When practicing 10–20 progressions in the same key (e.g., C Major), hearing a 4-chord cadence before every 3-chord question causes ear fatigue and doubles exercise time. A single grounded root-position <code>I</code> chord re-confirms home quickly.</li>
-          <li><strong>Tip for Random Key mode:</strong> A single major triad in isolation cannot clear a previous key's dominant from short-term memory. When switching keys or using <em>Random Key</em>, students should press <code>A</code> (Tonic Anchor) an extra time to let the new tonic settle.</li>
+          <li><strong>Musical Patterns & Substitutions (Default):</strong> Draws from curated classical 3-chord and 4-chord syntaxes covering full functional cycles (<code>T–S–D–T</code>, e.g., <code>I–IV–V–I</code>, <code>i–iv–V–i</code>, <code>I–vi–ii–V</code>, <code>i–VI–ii°–V</code>), authentic/half cadences (<code>ii–V–I</code>, <code>ii°–V–i</code>), deceptive resolutions (<code>I–IV–V–vi</code>, <code>i–iv–V–VI</code>), and tonic prolongations. Unidiomatic retrogressions (<code>V → IV</code>, <code>vii° → ii</code>) are excluded.</li>
+          <li><strong>Random Diatonic Triads:</strong> Draws 3 or 4 diatonic chords without immediate repeats. Useful once an advanced student starts "gaming" Syntactic Mode by deducing the final chord via theory rules rather than listening.</li>
         </ul>
       </div>
     </div>
 
     <div class="qa-card">
-      <div class="qa-q">5. How are progressions chosen? Will the student hear unidiomatic syntax like V → IV?</div>
+      <div class="qa-q">6. Why is the Tonic Anchor a single I / i chord rather than a full I–IV–V–I cadence?</div>
       <div class="qa-a">
-        The student can switch between two generators in the header:
         <ul>
-          <li><strong>Musical Patterns & Substitutions (Default):</strong> Draws from 24 classical 3-chord syntaxes covering authentic/half cadences (<code>ii–V–I</code>, <code>I–IV–V</code>), deceptive resolutions (<code>IV–V–vi</code>, <code>V–vi–IV</code>), tonic prolongations (<code>I–vi–ii</code>, <code>I–iii–IV</code>), and dominant openings (<code>V–I–IV</code>). Unidiomatic retrogressions (<code>V → IV</code>, <code>vii° → ii</code>) are excluded.</li>
-          <li><strong>Random Diatonic Triads:</strong> Draws any 3 diatonic chords without immediate repeats. Useful once an advanced student starts "gaming" Syntactic Mode by deducing the 3rd chord via theory rules rather than listening.</li>
+          <li><strong>Same-key drilling efficiency:</strong> When practicing 10–20 progressions in the same key, hearing a 4-chord cadence before every question causes ear fatigue and doubles exercise time. A single grounded root-position tonic triad re-confirms home quickly.</li>
+          <li><strong>Tip for Random Key mode:</strong> When switching keys or using <em>Random Key</em>, students should press <code>A</code> (Tonic Anchor) an extra time to let the new major or minor tonic settle before judging the progression.</li>
         </ul>
       </div>
     </div>
 
     <div class="qa-card">
-      <div class="qa-q">6. Why synthesized sound instead of recorded acoustic piano samples?</div>
+      <div class="qa-q">7. Why synthesized sound instead of recorded acoustic piano samples?</div>
       <div class="qa-a">
         <ul>
           <li><strong>Preventing "Soprano Tracking":</strong> Acoustic piano samples have bright hammer transients around 2–4 kHz, making it easy for students to simply sing the top soprano melody note and deduce the chord mathematically.</li>
