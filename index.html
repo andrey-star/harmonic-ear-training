@@ -2787,13 +2787,6 @@ function clearPianoHighlights() {
    9. KEYBOARD SHORTCUTS
    ======================================================================== */
 
-function assignNextUnansweredFamily(fam) {
-  if (STATE.isRevealed) return;
-  let targetIdx = STATE.userGuesses.findIndex(g => !g.familyGuess);
-  if (targetIdx === -1) targetIdx = STATE.progressionLength - 1;
-  selectFamily(targetIdx, fam);
-}
-
 document.addEventListener("keydown", (e) => {
   if (["INPUT", "SELECT", "TEXTAREA"].includes(e.target.tagName)) return;
   if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -2810,12 +2803,6 @@ document.addEventListener("keydown", (e) => {
   } else if (e.key === "Enter") {
     e.preventDefault();
     submitAnswers();
-  } else if (e.key === "1") {
-    assignNextUnansweredFamily("T");
-  } else if (e.key === "2") {
-    assignNextUnansweredFamily("S");
-  } else if (e.key === "3") {
-    assignNextUnansweredFamily("D");
   }
 });
 
