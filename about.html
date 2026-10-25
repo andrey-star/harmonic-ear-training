@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Teacher's Reference — Harmonic Ear Training</title>
+  <title>Musical Specification — Harmonic Ear Training</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎹</text></svg>">
   <style>
     :root {
@@ -90,67 +90,103 @@
       margin-top: 3px;
     }
 
-    /* Q&A CARDS */
-    .qa-list {
+    .spec-list {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 14px;
     }
 
-    .qa-card {
+    .spec-card {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 15px 18px;
+      padding: 16px 18px;
       display: flex;
       flex-direction: column;
-      gap: 7px;
+      gap: 8px;
     }
 
-    .qa-q {
+    .spec-title {
       font-family: var(--font-serif);
-      font-size: 1rem;
+      font-size: 1.05rem;
       font-weight: 600;
       color: var(--text);
     }
 
-    .qa-a {
+    .spec-body {
       font-size: 0.84rem;
       color: var(--text);
       line-height: 1.55;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
 
-    .qa-a ul {
-      margin-top: 5px;
+    .spec-body ul {
       padding-left: 18px;
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 5px;
     }
 
-    .qa-a li {
+    .spec-body li {
       font-size: 0.83rem;
     }
 
-    .tradeoff-note {
-      margin-top: 4px;
-      padding: 7px 10px;
+    .note-box {
+      margin-top: 2px;
+      padding: 8px 10px;
       background: var(--surface-subtle);
       border-left: 2px solid var(--border);
       font-size: 0.79rem;
       color: var(--text-muted);
     }
 
-    /* MINI PILLS */
-    .pill {
-      font-family: var(--font-serif);
-      font-weight: 600;
-      padding: 1px 6px;
-      border-radius: var(--radius);
-      font-size: 0.8rem;
+    .prog-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    @media (max-width: 600px) {
+      .prog-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .prog-group {
       background: var(--surface-subtle);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .prog-group h4 {
+      font-family: var(--font-serif);
+      font-size: 0.86rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .prog-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .prog-tag {
+      font-family: var(--font-serif);
+      font-size: 0.78rem;
+      background: var(--surface);
       border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 2px 7px;
       color: var(--ink);
+      white-space: nowrap;
     }
 
     code {
@@ -171,92 +207,149 @@
   </nav>
 
   <header>
-    <h1>Teacher’s Reference: Musical Assumptions & Design Trade-offs</h1>
-    <p>A concise overview of the harmonic model, minor-key conventions, voice-leading rules, and pedagogical simplifications built into this trainer.</p>
+    <h1>Musical Design & Progression Bank</h1>
+    <p>Summary of the chord vocabulary, keyboard voicing rules, and progression bank used by the trainer.</p>
   </header>
 
-  <div class="qa-list">
+  <div class="spec-list">
 
-    <div class="qa-card">
-      <div class="qa-q">1. Why are chords restricted to plain triads with roots in the bass (no V7, no bass inversions, no cadential 6/4)?</div>
-      <div class="qa-a">
+    <div class="spec-card">
+      <div class="spec-title">1. Root-in-Bass Triads (Major & Composite Minor)</div>
+      <div class="spec-body">
+        <p>Every chord is a 3-note triad with its root in the left-hand bass:</p>
         <ul>
-          <li><strong>Why plain V instead of V7:</strong> When <code>V7</code> is used among triads, students quickly bypass functional listening by simply hunting for a 4-note chord or the 4–7 tritone. Keeping all seven chords as pure 3-note triads (<code>I, ii, iii, IV, V, vi, vii°</code> in major; <code>i, ii°, III, iv, V, VI, vii°</code> in minor) forces the ear to judge harmonic gravity and bass relationship rather than chord density.</li>
-          <li><strong>Why roots in the bass:</strong> The left hand plays scale degrees 1 through 7 in the baritone register so bass recognition maps 1:1 to the Roman numeral in Stage 2. Cadential <code>I6/4</code> is excluded here because its dominant bass (5) conflicts with its tonic upper tones (1, 3).</li>
+          <li><strong>Major keys:</strong> <code>I, ii, iii, IV, V, vi, vii°</code></li>
+          <li><strong>Minor keys:</strong> <code>i, ii°, III, iv, V, VI, vii°</code> — uses the standard classical composite minor: harmonic minor (raised ♯7) for the dominant family (<code>V</code> and <code>vii°</code>) so cadential tension toward <code>i</code> is clear, and natural minor (unraised ♭7) for the mediant (<code>III</code> major rather than <code>III+</code>).</li>
+          <li><strong>Why plain triads with roots in the bass:</strong> <code>V7</code> is omitted so students cannot rely on spotting a 4-note chord or tritone instead of listening for function, and the bass always plays the chord root so Stage 1 and Stage 2 map directly to the bass degree (no bass inversions or cadential <code>I6/4</code> yet).</li>
         </ul>
       </div>
     </div>
 
-    <div class="qa-card">
-      <div class="qa-q">2. Which minor scale is used for minor keys (natural, harmonic, or melodic)?</div>
-      <div class="qa-a">
-        Rather than forcing a single theoretical scale across all degrees, the trainer uses the standard <strong>classical composite functional minor</strong> taught in conservatory harmony:
+    <div class="spec-card">
+      <div class="spec-title">2. Keyboard Voicing & Voice Leading</div>
+      <div class="spec-body">
+        <p>Chords are voiced in <strong>4-part close keyboard style</strong> (1 bass note in the left hand + 3-note close triad within one hand's span in the right hand):</p>
         <ul>
-          <li><strong>Harmonic minor for Dominant function (<code>V</code>, <code>vii°</code>):</strong> Scale degree 7 is raised (♯7) to create the leading tone, giving <code>V</code> a major triad quality and <code>vii°</code> a diminished triad quality so dominant resolution to <code>i</code> is unmistakably directional.</li>
-          <li><strong>Natural minor for Mediant (<code>III</code>):</strong> The mediant triad uses the unraised ♭7 (<code>III</code> major, the relative major triad) rather than the harsh harmonic-minor augmented triad (<code>III+</code>), which rarely functions as a simple diatonic mediant in foundational ear training.</li>
-          <li><strong>Subdominant & Tonic triads (<code>i</code>, <code>ii°</code>, <code>iv</code>, <code>VI</code>):</strong> Built with the natural ♭6 scale degree, yielding the characteristic minor tonic (<code>i</code>), minor subdominant (<code>iv</code>), half-diminished-prep triad (<code>ii°</code>), and warm major submediant (<code>VI</code>).</li>
+          <li><strong>Register:</strong> Left-hand bass stays in the baritone octave (<code>E2–E3</code>); right-hand upper voices stay in the middle register (<code>G3–C5</code>) in whichever inversion (`5/3`, `6/3`, or `6/4` upper shape) is closest to the previous chord.</li>
+          <li><strong>Common tones & stepwise motion:</strong> Shared notes are held in the exact same voice while moving voices step by semitone or whole tone.</li>
+          <li><strong>Contrary motion against stepping bass:</strong> When the bass steps by 2nd (e.g., <code>IV → V</code>, <code>iv → V</code>, or <code>V → vi</code>), the right-hand voices move in contrary motion to avoid parallel 5ths and octaves.</li>
+          <li><strong>Cadential & minor rules:</strong> On authentic <code>D → T</code> resolutions, the leading tone (7 / ♯7) resolves up by semitone to 1. In minor keys, upper voices never leap across the melodic augmented second (♭6 ↔ ♯7) between <code>iv</code>/<code>VI</code> and <code>V</code>.</li>
         </ul>
-      </div>
-    </div>
-
-    <div class="qa-card">
-      <div class="qa-q">3. How are chords voiced, and how does the engine handle part-writing in major and minor?</div>
-      <div class="qa-a">
-        <strong>4-part close keyboard style</strong> (1 bass note in the left hand + 3-note close triad within one hand's span in the right hand), rather than open SATB chorale spacing:
-        <ul>
-          <li><strong>Why close keyboard position:</strong> Wide SATB spacing encourages the ear to track individual contrapuntal lines. Tight right-hand voicings (<code>G3–C5</code>, span ≤ 9–12 semitones) fuse psychoacoustically into a single harmonic color while keeping a clear acoustic window above the bass (<code>E2–E3</code>).</li>
-          <li><strong>Part-writing constraints:</strong> Common tones are held in the exact same voice; moving voices step to the nearest chord tone. When the bass steps by 2nd (e.g., <code>IV → V</code>, <code>iv → V</code>, or <code>V → VI</code>), the right hand moves in <strong>contrary motion</strong> to prevent parallel 5ths and parallel octaves with the bass. On authentic <code>D → T</code> resolutions, the leading tone (7) resolves up by semitone to 1.</li>
-          <li><strong>No augmented seconds in minor:</strong> In progressions moving between ♭6 and ♯7 (such as <code>iv → V</code>, <code>VI → V</code>, or <code>V → VI</code>), the voice-leading engine strictly forbids any upper voice from leaping across the 3-semitone augmented second (♭6 ↔ ♯7).</li>
-        </ul>
-        <div class="tradeoff-note">
-          <strong>Trade-off on vii° and ii°:</strong> In classical repertoire, <code>vii°</code> and <code>ii°</code> normally appear in first inversion (<code>vii°6</code>, <code>ii°6</code>) to soften the diminished fifth above the bass. Here, both retain their root in the bass so that every chord preserves a consistent 1:1 root-in-bass mapping when students transition to Stage 2.
+        <div class="note-box">
+          Note: Because every chord keeps its root in the bass for this stage, <code>vii°</code> and <code>ii°</code> also appear with their root in the bass rather than first inversion (<code>vii°6</code> / <code>ii°6</code>).
         </div>
       </div>
     </div>
 
-    <div class="qa-card">
-      <div class="qa-q">4. How are the seven chords grouped into the three functional families in Stage 1?</div>
-      <div class="qa-a">
-        Stage 1 uses Hugo Riemann's three-function taxonomy across both modes:
-        <ul>
-          <li><span class="pill">Tonic (T)</span>: <strong>I, vi, iii</strong> (Major) / <strong>i, VI, III</strong> (Minor) — Centers of rest, tonic prolongation, and deceptive resolution (sharing two common tones with the tonic).</li>
-          <li><span class="pill">Subdominant (S)</span>: <strong>IV, ii</strong> (Major) / <strong>iv, ii°</strong> (Minor) — Pre-dominant departure (both contain scale degree 4).</li>
-          <li><span class="pill">Dominant (D)</span>: <strong>V, vii°</strong> (Major & Minor) — Active tension containing the leading tone (7 / ♯7) demanding resolution.</li>
-        </ul>
-        <div class="tradeoff-note">
-          <strong>Contextual nuance on iii / III:</strong> While the mediant can behave as a dominant preparation in some repertoire, in this trainer's syntactic corpus it is used in its tonic-prolongation and descending-step / circle-of-fifths roles (<code>I–iii–IV</code>, <code>i–III–iv</code>, <code>i–III–VI–V</code>, <code>i–VI–III–iv</code>).
+    <div class="spec-card">
+      <div class="spec-title">3. Progression Bank</div>
+      <div class="spec-body">
+        <p>In <strong>Musical Patterns</strong> mode (default), progressions are drawn from the bank below. Switching to <strong>Random Diatonic Triads</strong> in the header picks any 3 or 4 diatonic chords without immediate repeats so students cannot guess the final chord by elimination.</p>
+
+        <div class="prog-grid">
+          <div class="prog-group">
+            <h4>Major — 3 Chords (24)</h4>
+            <div class="prog-tags">
+              <span class="prog-tag">I – IV – V</span>
+              <span class="prog-tag">I – ii – V</span>
+              <span class="prog-tag">I – vi – IV</span>
+              <span class="prog-tag">I – vi – ii</span>
+              <span class="prog-tag">I – iii – IV</span>
+              <span class="prog-tag">I – iii – vi</span>
+              <span class="prog-tag">I – V – vi</span>
+              <span class="prog-tag">I – IV – I</span>
+              <span class="prog-tag">I – V – I</span>
+              <span class="prog-tag">I – vii° – I</span>
+              <span class="prog-tag">IV – V – I</span>
+              <span class="prog-tag">ii – V – I</span>
+              <span class="prog-tag">IV – vii° – I</span>
+              <span class="prog-tag">ii – vii° – I</span>
+              <span class="prog-tag">vi – IV – V</span>
+              <span class="prog-tag">vi – ii – V</span>
+              <span class="prog-tag">iii – vi – ii</span>
+              <span class="prog-tag">iii – IV – V</span>
+              <span class="prog-tag">IV – V – vi</span>
+              <span class="prog-tag">ii – V – vi</span>
+              <span class="prog-tag">IV – I – V</span>
+              <span class="prog-tag">V – vi – IV</span>
+              <span class="prog-tag">V – vi – ii</span>
+              <span class="prog-tag">V – I – IV</span>
+            </div>
+          </div>
+
+          <div class="prog-group">
+            <h4>Minor — 3 Chords (20)</h4>
+            <div class="prog-tags">
+              <span class="prog-tag">i – iv – V</span>
+              <span class="prog-tag">i – ii° – V</span>
+              <span class="prog-tag">i – VI – iv</span>
+              <span class="prog-tag">i – VI – ii°</span>
+              <span class="prog-tag">i – VI – V</span>
+              <span class="prog-tag">i – III – iv</span>
+              <span class="prog-tag">i – III – VI</span>
+              <span class="prog-tag">i – V – VI</span>
+              <span class="prog-tag">i – iv – i</span>
+              <span class="prog-tag">i – V – i</span>
+              <span class="prog-tag">i – vii° – i</span>
+              <span class="prog-tag">iv – V – i</span>
+              <span class="prog-tag">ii° – V – i</span>
+              <span class="prog-tag">VI – V – i</span>
+              <span class="prog-tag">iv – vii° – i</span>
+              <span class="prog-tag">VI – iv – V</span>
+              <span class="prog-tag">VI – ii° – V</span>
+              <span class="prog-tag">iv – V – VI</span>
+              <span class="prog-tag">iv – i – V</span>
+              <span class="prog-tag">V – VI – iv</span>
+            </div>
+          </div>
+
+          <div class="prog-group">
+            <h4>Major — 4 Chords (18)</h4>
+            <div class="prog-tags">
+              <span class="prog-tag">I – IV – V – I</span>
+              <span class="prog-tag">I – ii – V – I</span>
+              <span class="prog-tag">I – vi – IV – V</span>
+              <span class="prog-tag">I – vi – ii – V</span>
+              <span class="prog-tag">I – IV – V – vi</span>
+              <span class="prog-tag">I – ii – V – vi</span>
+              <span class="prog-tag">I – V – vi – IV</span>
+              <span class="prog-tag">I – V – vi – ii</span>
+              <span class="prog-tag">I – iii – IV – V</span>
+              <span class="prog-tag">I – iii – vi – IV</span>
+              <span class="prog-tag">I – iii – vi – ii</span>
+              <span class="prog-tag">I – IV – vii° – I</span>
+              <span class="prog-tag">I – ii – vii° – I</span>
+              <span class="prog-tag">vi – IV – V – I</span>
+              <span class="prog-tag">vi – ii – V – I</span>
+              <span class="prog-tag">iii – vi – ii – V</span>
+              <span class="prog-tag">IV – V – vi – IV</span>
+              <span class="prog-tag">I – IV – I – V</span>
+            </div>
+          </div>
+
+          <div class="prog-group">
+            <h4>Minor — 4 Chords (17)</h4>
+            <div class="prog-tags">
+              <span class="prog-tag">i – iv – V – i</span>
+              <span class="prog-tag">i – ii° – V – i</span>
+              <span class="prog-tag">i – VI – iv – V</span>
+              <span class="prog-tag">i – VI – ii° – V</span>
+              <span class="prog-tag">i – VI – V – i</span>
+              <span class="prog-tag">i – iv – V – VI</span>
+              <span class="prog-tag">i – ii° – V – VI</span>
+              <span class="prog-tag">i – V – VI – iv</span>
+              <span class="prog-tag">i – III – VI – V</span>
+              <span class="prog-tag">i – III – iv – V</span>
+              <span class="prog-tag">i – VI – III – iv</span>
+              <span class="prog-tag">i – iv – vii° – i</span>
+              <span class="prog-tag">i – ii° – vii° – i</span>
+              <span class="prog-tag">VI – iv – V – i</span>
+              <span class="prog-tag">VI – ii° – V – i</span>
+              <span class="prog-tag">III – VI – ii° – V</span>
+              <span class="prog-tag">i – iv – i – V</span>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-
-    <div class="qa-card">
-      <div class="qa-q">5. How do 3-chord and 4-chord progressions work, and will students hear unidiomatic syntax like V → IV?</div>
-      <div class="qa-a">
-        Students can choose <strong>3 Chords</strong> or <strong>4 Chords</strong> alongside two progression generators in the header:
-        <ul>
-          <li><strong>Musical Patterns & Substitutions (Default):</strong> Draws from curated classical 3-chord and 4-chord syntaxes covering full functional cycles (<code>T–S–D–T</code>, e.g., <code>I–IV–V–I</code>, <code>i–iv–V–i</code>, <code>I–vi–ii–V</code>, <code>i–VI–ii°–V</code>), authentic/half cadences (<code>ii–V–I</code>, <code>ii°–V–i</code>), deceptive resolutions (<code>I–IV–V–vi</code>, <code>i–iv–V–VI</code>), and tonic prolongations. Unidiomatic retrogressions (<code>V → IV</code>, <code>vii° → ii</code>) are excluded.</li>
-          <li><strong>Random Diatonic Triads:</strong> Draws 3 or 4 diatonic chords without immediate repeats. Useful once an advanced student starts "gaming" Syntactic Mode by deducing the final chord via theory rules rather than listening.</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="qa-card">
-      <div class="qa-q">6. Why is the Tonic Anchor a single I / i chord rather than a full I–IV–V–I cadence?</div>
-      <div class="qa-a">
-        <ul>
-          <li><strong>Same-key drilling efficiency:</strong> When practicing 10–20 progressions in the same key, hearing a 4-chord cadence before every question causes ear fatigue and doubles exercise time. A single grounded root-position tonic triad re-confirms home quickly.</li>
-          <li><strong>Tip for Random Key mode:</strong> When switching keys or using <em>Random Key</em>, students should press <code>A</code> (Tonic Anchor) an extra time to let the new major or minor tonic settle before judging the progression.</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="qa-card">
-      <div class="qa-q">7. Why synthesized sound instead of recorded acoustic piano samples?</div>
-      <div class="qa-a">
-        <ul>
-          <li><strong>Preventing "Soprano Tracking":</strong> Acoustic piano samples have bright hammer transients around 2–4 kHz, making it easy for students to simply sing the top soprano melody note and deduce the chord mathematically.</li>
-          <li><strong>Controlled Harmonic Blend:</strong> The synthesizer uses decaying harmonic partials (zero organ-like sustain plateau) with softened inner/soprano velocities (<code>0.52–0.55</code>), a grounded bass (<code>0.66</code>), and a 25ms legato overlap so the four voices fuse into a unified harmonic color.</li>
-        </ul>
       </div>
     </div>
 
