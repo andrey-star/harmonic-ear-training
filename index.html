@@ -568,10 +568,37 @@
       background: var(--surface-hover);
     }
 
+    .roman-btn.family-candidate-t {
+      background: var(--tonic-bg);
+      border-color: var(--tonic-border);
+      color: var(--tonic);
+    }
+
+    .roman-btn.family-candidate-s {
+      background: var(--subdominant-bg);
+      border-color: var(--subdominant-border);
+      color: var(--subdominant);
+    }
+
+    .roman-btn.family-candidate-d {
+      background: var(--dominant-bg);
+      border-color: var(--dominant-border);
+      color: var(--dominant);
+    }
+
+    .roman-btn.family-dimmed {
+      opacity: 0.45;
+    }
+
     .roman-btn.active-rn {
-      background: var(--ink);
-      color: var(--bg);
-      border-color: var(--ink);
+      background: var(--ink) !important;
+      color: var(--bg) !important;
+      border-color: var(--ink) !important;
+      opacity: 1 !important;
+    }
+
+    .chord-card.card-unanswered {
+      border-color: var(--dominant);
     }
 
     /* VERDICT BADGES (In stage label and header) */
@@ -1427,19 +1454,31 @@ function midiToPitchClass(midiNumber, keyName = "C") {
 }
 
 /* ========================================================================
-   2. SMOOTH VOICE LEADING ENGINE (NEAREST INVERSIONS)
+   2. SMOOTH VOICE LEADING ENGINE (CLASSICAL KEYBOARD PART-WRITING)
    ======================================================================== */
 
 /**
  * Finds the voicing for 3 upper voices [w1 < w2 < w3] that minimizes
- * total voice displacement sum((w_i - prev_i)^2) from previous voices.
+ * voice displacement while respecting classical keyboard part-writing:
+ * - Holds common tones in the same voice
+ * - Avoids parallel 5ths and parallel octaves against a moving bass
+ * - Prefers contrary motion when the bass steps by 2nd
+ * - Resolves the leading tone (7 -> 1) on authentic D -> I resolutions
  */
-function findBestUpperVoicing(prevVoices, targetPitchClasses, centerMidi = 63) {
+function findBestUpperVoicing(
+  prevVoices,
+  targetPitchClasses,
+  centerMidi = 63,
+  prevBass = null,
+  currBass = null,
+  leadingTonePc = null,
+  isAuthenticResolution = false
+) {
   const pcs = targetPitchClasses;
   let bestVoicing = null;
   let bestCost = Infinity;
 
-  // Search upper voices in comfortable keyboard treble range (MIDI 55 to 74)
+  // Search upper voices in comfortable keyboard treble range (MIDI 55 to 72)
   for (let n1 = 55; n1 <= 72; n1++) {
     if (!pcs.includes(n1 % 12)) continue;
     for (let n2 = n1 + 1; n2 <= n1 + 9; n2++) {
@@ -1449,7 +1488,7 @@ function findBestUpperVoicing(prevVoices, targetPitchClasses, centerMidi = 63) {
 
         const w = [n1, n2, n3];
         const span = n3 - n1;
-        // Natural keyboard spacing: all 3 upper voices must fit in a single hand (span <= 12, ideally <= 9)
+        // All 3 upper voices must fit comfortably under one hand (span <= 12, ideally <= 9)
         if (span > 12) continue;
 
         let cost = 0;
@@ -1457,10 +1496,45 @@ function findBestUpperVoicing(prevVoices, targetPitchClasses, centerMidi = 63) {
           for (let i = 0; i < 3; i++) {
             cost += Math.pow(w[i] - prevVoices[i], 2);
           }
+
+          // Part-writing checks against bass movement
+          if (prevBass !== null && currBass !== null && currBass !== prevBass) {
+            const bassDelta = currBass - prevBass;
+            let allSameDir = true;
+            for (let i = 0; i < 3; i++) {
+              const vDelta = w[i] - prevVoices[i];
+              if (vDelta === 0 || Math.sign(vDelta) !== Math.sign(bassDelta)) {
+                allSameDir = false;
+              }
+              const prevInt = ((prevVoices[i] - prevBass) % 12 + 12) % 12;
+              const currInt = ((w[i] - currBass) % 12 + 12) % 12;
+              // Penalize parallel octaves (0) and parallel fifths (7) with the bass
+              if (vDelta !== 0 && prevInt === currInt && (currInt === 0 || currInt === 7)) {
+                cost += 25;
+              }
+            }
+            // Penalize all 4 voices moving in parallel/similar direction
+            if (allSameDir) cost += 12;
+          }
+
+          // Leading-tone resolution (scale degree 7 -> 1) on authentic D -> I cadence
+          if (isAuthenticResolution && leadingTonePc !== null) {
+            const tonicPc = (leadingTonePc + 1) % 12;
+            for (let i = 0; i < 3; i++) {
+              if (prevVoices[i] % 12 === leadingTonePc) {
+                if (w[i] - prevVoices[i] === 1 && w[i] % 12 === tonicPc) {
+                  cost -= 4;
+                } else {
+                  cost += 8;
+                }
+              }
+            }
+          }
         }
+
         // Penalize wide hand stretches
         cost += 0.4 * Math.max(0, span - 9);
-        // Centering pull toward middle treble (around Middle C / D4)
+        // Centering pull toward middle treble (around D#4 / E4)
         const avg = (n1 + n2 + n3) / 3;
         cost += 0.15 * Math.pow(avg - centerMidi, 2);
 
@@ -1475,17 +1549,18 @@ function findBestUpperVoicing(prevVoices, targetPitchClasses, centerMidi = 63) {
 }
 
 /**
- * Finds the bass note for the root that moves smoothly within octave 2-3 (MIDI 41 to 55).
+ * Finds the grounded bass root in baritone range (E2 to E3, MIDI 40 to 52),
+ * ensuring clear separation below the lowest upper voice (MIDI >= 55).
  */
-function findBestBass(prevBass, targetPc, minMidi = 41, maxMidi = 55) {
+function findBestBass(prevBass, targetPc, minMidi = 40, maxMidi = 52) {
   const candidates = [];
   for (let m = minMidi; m <= maxMidi; m++) {
     if (m % 12 === targetPc) candidates.push(m);
   }
   if (!candidates.length) return 48;
   if (!prevBass) {
-    // Choose candidate closest to middle C3 (MIDI 48)
-    return candidates.reduce((prev, curr) => Math.abs(curr - 48) < Math.abs(prev - 48) ? curr : prev);
+    // Anchor initial tonic bass near A2-C3 (MIDI 46)
+    return candidates.reduce((prev, curr) => Math.abs(curr - 46) < Math.abs(prev - 46) ? curr : prev);
   }
   let best = candidates[0];
   let minDiff = Infinity;
@@ -1500,11 +1575,12 @@ function findBestBass(prevBass, targetPc, minMidi = 41, maxMidi = 55) {
 }
 
 /* ========================================================================
-   3. AUDIO SYNTHESIS ENGINE (Tone.js Dedicated Acoustic Engine)
+   3. AUDIO SYNTHESIS ENGINE (Tone.js + iOS Safari Playback Unlock)
    ======================================================================== */
 
 let audioInitialized = false;
 let synthsReady = false;
+let iosSilentSwitchUnlocked = false;
 let upperSynth = null;
 let bassSynth = null;
 let masterLimiter = null;
@@ -1514,52 +1590,89 @@ let toneFilter = null;
 let bassFilter = null;
 let activePlaybackTimers = [];
 
+// 48-byte silent WAV data URI to force iOS Safari out of the hardware-muted "ambient" channel into "playback"
+const SILENT_WAV_URI = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+let iosUnlockAudioEl = null;
+
+function unlockiOSAudioSession() {
+  if (iosSilentSwitchUnlocked) return;
+  try {
+    // iOS 17+ native AudioSession API: routes Web Audio to media playback (ignores silent switch)
+    if (navigator.audioSession && navigator.audioSession.type !== "playback") {
+      navigator.audioSession.type = "playback";
+    }
+  } catch (e) {}
+
+  try {
+    // Universal iOS WebKit fallback: playing an HTML5 <audio> element promotes the page audio session
+    if (!iosUnlockAudioEl) {
+      iosUnlockAudioEl = new Audio(SILENT_WAV_URI);
+      iosUnlockAudioEl.setAttribute("playsinline", "");
+      iosUnlockAudioEl.volume = 0.01;
+    }
+    const p = iosUnlockAudioEl.play();
+    if (p && typeof p.then === "function") {
+      p.then(() => {
+        iosSilentSwitchUnlocked = true;
+      }).catch(() => {});
+    }
+  } catch (e) {}
+}
+
 function setupSynths() {
   if (synthsReady || !window.Tone) return;
   try {
     masterLimiter = new Tone.Limiter(-1).toDestination();
-    masterVol = new Tone.Volume(-8).connect(masterLimiter);
+    masterVol = new Tone.Volume(-7).connect(masterLimiter);
 
     toneFilter = new Tone.Filter({
-      frequency: 2200,
+      frequency: 2100,
       type: "lowpass",
       rolloff: -12
     }).connect(masterVol);
 
-    // Instant algorithmic reverb: zero async buffer generation delay
+    // Instant algorithmic Schroeder reverb: 0ms initialization
     toneReverb = new Tone.Freeverb({
-      roomSize: 0.6,
-      dampening: 2500
+      roomSize: 0.58,
+      dampening: 2400
     }).connect(toneFilter);
-    toneReverb.wet.value = 0.18;
+    toneReverb.wet.value = 0.16;
 
+    // Acoustic keyboard upper voices: rich fundamental + decaying even/odd partials, zero organ sustain plateau
     upperSynth = new Tone.PolySynth(Tone.Synth, {
       maxPolyphony: 12,
       volume: 0,
-      oscillator: { type: "triangle" },
+      oscillator: {
+        type: "custom",
+        partials: [1, 0.45, 0.2, 0.09, 0.04]
+      },
       envelope: {
-        attack: 0.014, // 14ms smooth attack
-        decay: 2.1,
-        sustain: 0.18,
-        release: 0.9
+        attack: 0.014,
+        decay: 2.6,
+        sustain: 0.0,
+        release: 0.85
       }
     }).connect(toneReverb);
 
     bassFilter = new Tone.Filter({
-      frequency: 520,
+      frequency: 540,
       type: "lowpass",
       rolloff: -12
     }).connect(masterVol);
 
+    // Grounded baritone bass: fundamental + warm 2nd/3rd harmonics with natural string decay
     bassSynth = new Tone.PolySynth(Tone.Synth, {
       maxPolyphony: 4,
       volume: -1,
-      oscillator: { type: "sine" },
+      oscillator: {
+        type: "custom",
+        partials: [1, 0.35, 0.12]
+      },
       envelope: {
-        attack: 0.030, // 30ms anti-click ramp
-        decay: 2.3,
-        sustain: 0.25,
-        release: 1.0
+        attack: 0.026,
+        decay: 3.0,
+        sustain: 0.0,
+        release: 0.95
       }
     }).connect(bassFilter);
 
@@ -1569,20 +1682,44 @@ function setupSynths() {
   }
 }
 
-async function ensureAudioReady() {
+/**
+ * Synchronously kicks the AudioContext during a user gesture (critical for iOS Safari),
+ * then awaits running state.
+ */
+function ensureAudioReady() {
+  unlockiOSAudioSession();
   setupSynths();
-  if (window.Tone && Tone.context.state !== "running") {
-    try {
-      await Tone.start();
-    } catch (err) {
-      console.warn("Tone.start error:", err);
+
+  if (!window.Tone) return Promise.resolve();
+
+  try {
+    const rawCtx = Tone.context.rawContext || Tone.context._context;
+    if (rawCtx && rawCtx.state !== "running" && typeof rawCtx.resume === "function") {
+      rawCtx.resume().catch(() => {});
     }
+    if (Tone.context.state !== "running") {
+      return Tone.start().then(() => {
+        audioInitialized = true;
+      }).catch(err => {
+        console.warn("Tone.start notice:", err);
+      });
+    }
+  } catch (err) {
+    console.warn("Audio resume notice:", err);
   }
+
   audioInitialized = true;
+  return Promise.resolve();
 }
 
-document.addEventListener("click", () => { ensureAudioReady(); }, { once: true });
-document.addEventListener("keydown", () => { ensureAudioReady(); }, { once: true });
+// Keep listener active across gestures so iOS Safari can recover from "interrupted" state after tab switches
+["touchstart", "pointerdown", "click", "keydown"].forEach(evtName => {
+  document.addEventListener(evtName, () => {
+    if (!iosSilentSwitchUnlocked || (window.Tone && Tone.context.state !== "running")) {
+      ensureAudioReady();
+    }
+  }, { passive: true });
+});
 
 function stopAllPlayback() {
   activePlaybackTimers.forEach(id => clearTimeout(id));
@@ -1602,7 +1739,7 @@ function stopAllPlayback() {
 }
 
 /**
- * Play a voiced chord with acoustic envelope and voice balancing.
+ * Play a voiced chord with acoustic decay envelope and SATB voice balancing.
  */
 async function playMidiChord(midiNotes, durationSec, bassMidi = null) {
   await ensureAudioReady();
@@ -1613,23 +1750,25 @@ async function playMidiChord(midiNotes, durationSec, bassMidi = null) {
   }
 
   highlightPianoNotes(allNotes, bassMidi);
-  setTimeout(() => {
+  const hlTimer = setTimeout(() => {
     clearPianoHighlights();
-  }, Math.max(300, durationSec * 800));
+  }, Math.max(300, durationSec * 850));
+  activePlaybackTimers.push(hlTimer);
 
   if (upperSynth && bassSynth) {
+    const now = Tone.now();
     const upperVoicesMidi = allNotes.filter(m => m !== bassMidi).sort((a, b) => a - b);
     const weights = [0.58, 0.52, 0.55];
 
     upperVoicesMidi.forEach((m, idx) => {
       const noteStr = Tone.Frequency(m, "midi").toNote();
       const vel = weights[idx] !== undefined ? weights[idx] : 0.55;
-      upperSynth.triggerAttackRelease(noteStr, durationSec, undefined, vel);
+      upperSynth.triggerAttackRelease(noteStr, durationSec, now, vel);
     });
 
     if (bassMidi !== null) {
       const bassString = Tone.Frequency(bassMidi, "midi").toNote();
-      bassSynth.triggerAttackRelease(bassString, durationSec, undefined, 0.66);
+      bassSynth.triggerAttackRelease(bassString, durationSec, now, 0.66);
     }
   }
 }
@@ -1644,6 +1783,8 @@ const STATE = {
   progressionStyle: "syntactic",
   tempoBpm: 75,
   stage2Enabled: false,
+  isRevealed: false,
+  lastPatternKey: "",
 
   // Tonic anchor definition
   tonicAnchor: null,
@@ -1665,23 +1806,39 @@ const STATE = {
   currentStreak: 0
 };
 
-// Preset musical progression templates (diatonic syntax with functional variety)
+// 24 balanced classical progression syntaxes across functional openings and resolutions
 const PROGRESSION_PATTERNS = [
-  ["I", "IV", "V"],     // T -> S -> D
-  ["ii", "V", "I"],     // S -> D -> T
+  // Authentic & Cadential Archetypes
+  ["I", "IV", "V"],     // T -> S -> D (half cadence)
+  ["I", "ii", "V"],     // T -> S -> D (pre-dominant preparation)
+  ["ii", "V", "I"],     // S -> D -> T (authentic cadence)
+  ["IV", "V", "I"],     // S -> D -> T (classical cadence)
+  ["IV", "vii°", "I"],  // S -> D -> T (leading-tone resolution)
+  ["ii", "vii°", "I"],  // S -> D -> T (smooth bass step)
+  ["ii", "IV", "V"],    // S -> S -> D (expanded pre-dominant)
+
+  // Tonic Prolongations & Mediant/Submediant Substitutions
   ["I", "vi", "IV"],    // T -> T -> S
-  ["IV", "V", "vi"],    // S -> D -> T (deceptive)
+  ["I", "vi", "ii"],    // T -> T -> S
+  ["I", "iii", "IV"],   // T -> T -> S (descending step in soprano)
+  ["I", "iii", "vi"],   // T -> T -> T (tonic prolongation chain)
+  ["iii", "vi", "ii"],  // T -> T -> S (circle-of-fifths fragment)
   ["vi", "ii", "V"],    // T -> S -> D
-  ["I", "iii", "IV"],   // T -> T -> S
-  ["IV", "vii°", "I"],  // S -> D -> T
-  ["I", "ii", "V"],     // T -> S -> D
   ["vi", "IV", "V"],    // T -> S -> D
-  ["iii", "vi", "ii"],  // T -> T -> S
-  ["ii", "vii°", "I"],  // S -> D -> T
-  ["I", "V", "vi"],     // T -> D -> T
+  ["vi", "IV", "I"],    // T -> S -> T (plagal resolution)
+
+  // Deceptive & Elided Resolutions
+  ["IV", "V", "vi"],    // S -> D -> T (deceptive cadence)
+  ["ii", "V", "vi"],    // S -> D -> T (deceptive cadence)
+  ["I", "V", "vi"],     // T -> D -> T (deceptive motion)
+  ["V", "vi", "IV"],    // D -> T -> S (deceptive opening)
+  ["V", "vi", "ii"],    // D -> T -> S (deceptive to pre-dominant)
+
+  // Dominant Openings & Neighbor/Plagal Motions
+  ["V", "I", "IV"],     // D -> T -> S
+  ["V", "I", "ii"],     // D -> T -> S
   ["IV", "I", "V"],     // S -> T -> D
-  ["vi", "V", "I"],     // T -> D -> T
-  ["ii", "IV", "V"]     // S -> S -> D
+  ["I", "V", "I"]       // T -> D -> T (neighbor cadence)
 ];
 
 function getChordDefByRN(rn) {
@@ -1694,7 +1851,7 @@ function getChordDefByRN(rn) {
 function buildTonicVoicing(rootMidi, keyName) {
   const def = getChordDefByRN("I");
   const targetPcs = def.intervals.map(i => (rootMidi + i) % 12);
-  const upperVoices = findBestUpperVoicing(null, targetPcs, 62);
+  const upperVoices = findBestUpperVoicing(null, targetPcs, 63);
   const bass = findBestBass(null, (rootMidi + def.intervals[0]) % 12);
 
   return {
@@ -1707,17 +1864,22 @@ function buildTonicVoicing(rootMidi, keyName) {
 }
 
 /**
- * Builds the 3-chord diatonic progression with smooth voice leading from tonic anchor.
+ * Builds the 3-chord diatonic progression with classical voice leading from tonic anchor.
  */
 function buildProgressionVoicings(initialVoicing, rootMidi, keyName) {
   let selectedRNs = [];
 
   if (STATE.progressionStyle === "syntactic") {
-    // Pick from musically realistic patterns
-    const pattern = PROGRESSION_PATTERNS[Math.floor(Math.random() * PROGRESSION_PATTERNS.length)];
+    let pattern;
+    let key;
+    do {
+      pattern = PROGRESSION_PATTERNS[Math.floor(Math.random() * PROGRESSION_PATTERNS.length)];
+      key = pattern.join("-");
+    } while (key === STATE.lastPatternKey && PROGRESSION_PATTERNS.length > 1);
+    STATE.lastPatternKey = key;
     selectedRNs = [...pattern];
   } else {
-    // Purely random diatonic chords from I to vii° (avoiding 3 identical)
+    // Purely random diatonic chords from I to vii° (avoiding immediate repeats)
     for (let i = 0; i < 3; i++) {
       let candidate;
       do {
@@ -1730,12 +1892,23 @@ function buildProgressionVoicings(initialVoicing, rootMidi, keyName) {
   const chords = [];
   let prevVoices = initialVoicing ? initialVoicing.upperVoices : null;
   let prevBass = initialVoicing ? initialVoicing.bass : null;
+  let prevRN = initialVoicing ? initialVoicing.rn : "I";
+  const leadingTonePc = (rootMidi + 11) % 12;
 
   selectedRNs.forEach(rn => {
     const def = getChordDefByRN(rn);
     const targetPcs = def.intervals.map(i => (rootMidi + i) % 12);
-    const upperVoices = findBestUpperVoicing(prevVoices, targetPcs, 62);
     const bass = findBestBass(prevBass, (rootMidi + def.intervals[0]) % 12);
+    const isAuthenticResolution = (prevRN === "V" || prevRN === "vii°") && rn === "I";
+    const upperVoices = findBestUpperVoicing(
+      prevVoices,
+      targetPcs,
+      63,
+      prevBass,
+      bass,
+      leadingTonePc,
+      isAuthenticResolution
+    );
 
     chords.push({
       rn: def.rn,
@@ -1747,12 +1920,17 @@ function buildProgressionVoicings(initialVoicing, rootMidi, keyName) {
 
     prevVoices = upperVoices;
     prevBass = bass;
+    prevRN = rn;
   });
 
   return chords;
 }
 
 function generateNewExercise(autoPlay = true) {
+  // Unlock audio synchronously within the user gesture before any timer
+  if (autoPlay) {
+    ensureAudioReady();
+  }
   stopAllPlayback();
 
   // Resolve random key if selected
@@ -1772,6 +1950,7 @@ function generateNewExercise(autoPlay = true) {
   STATE.progression = buildProgressionVoicings(STATE.tonicAnchor, STATE.currentRootMidi, STATE.currentKeyName);
 
   // Reset user guess state
+  STATE.isRevealed = false;
   STATE.userGuesses = [
     { familyGuess: null, rnGuess: null },
     { familyGuess: null, rnGuess: null },
@@ -1782,10 +1961,7 @@ function generateNewExercise(autoPlay = true) {
   updateTimelineDisplay();
 
   if (autoPlay) {
-    // Schedule sequence playback after a tiny DOM render breather
-    setTimeout(() => {
-      playSequence();
-    }, 150);
+    playSequence();
   }
 }
 
@@ -1794,7 +1970,6 @@ function generateNewExercise(autoPlay = true) {
    ======================================================================== */
 
 function getChordDuration() {
-  // Duration in seconds per chord based on BPM
   const beatSec = 60 / STATE.tempoBpm;
   return beatSec * 1.5; // ~1.2s at 75 BPM
 }
@@ -1804,12 +1979,13 @@ async function playSequence() {
   await ensureAudioReady();
 
   const chordDur = getChordDuration();
-  const tonicDur = Math.max(1.4, chordDur * 1.15); // Clear sustained tonic chord
-  const pauseDur = 1.1; // Silence between tonic anchor and test progression
+  const tonicDur = Math.max(1.4, chordDur * 1.15);
+  const pauseDur = 1.1;
   let currentDelay = 0;
 
   // 1. Play Tonic Anchor
   const tonicTimer = setTimeout(() => {
+    document.querySelectorAll(".measure-node").forEach(n => n.classList.remove("active-playing"));
     document.getElementById("node-anchor").classList.add("active-playing");
     playMidiChord(STATE.tonicAnchor.upperVoices, tonicDur * 0.95, STATE.tonicAnchor.bass);
   }, currentDelay * 1000);
@@ -1832,10 +2008,9 @@ async function playSequence() {
   // 2. Play 3-Chord Progression (with 25ms legato overlap simulating acoustic pedal connection)
   STATE.progression.forEach((chord, i) => {
     const timer = setTimeout(() => {
-      // Highlight timeline & card
-      document.querySelectorAll(".timeline-node").forEach(n => n.classList.remove("active-playing"));
+      document.querySelectorAll(".measure-node").forEach(n => n.classList.remove("active-playing"));
       document.getElementById(`node-chord-${i}`).classList.add("active-playing");
-      
+
       document.querySelectorAll(".chord-card").forEach(c => c.classList.remove("active-sound"));
       document.getElementById(`card-chord-${i}`).classList.add("active-sound");
 
@@ -1883,7 +2058,7 @@ async function playProgressionOnly() {
 
   STATE.progression.forEach((chord, i) => {
     const timer = setTimeout(() => {
-      document.querySelectorAll(".timeline-node").forEach(n => n.classList.remove("active-playing"));
+      document.querySelectorAll(".measure-node").forEach(n => n.classList.remove("active-playing"));
       document.getElementById(`node-chord-${i}`).classList.add("active-playing");
 
       document.querySelectorAll(".chord-card").forEach(c => c.classList.remove("active-sound"));
@@ -1917,20 +2092,39 @@ async function playSingleChord(chordIndex) {
 
   playMidiChord(chord.upperVoices, 1.8, chord.bass);
 
-  setTimeout(() => {
+  const singleTimer = setTimeout(() => {
     card.classList.remove("active-sound");
     node.classList.remove("active-playing");
   }, 1800);
+  activePlaybackTimers.push(singleTimer);
 }
 
 /* ========================================================================
    6. USER INTERACTION & STAGE GUESSING
    ======================================================================== */
 
+function updateStage2CandidateHighlights(chordIndex, family) {
+  const grid = document.getElementById(`roman-grid-${chordIndex}`);
+  if (!grid) return;
+
+  grid.querySelectorAll(".roman-btn").forEach(btn => {
+    btn.classList.remove("family-candidate-t", "family-candidate-s", "family-candidate-d", "family-dimmed");
+    if (!family) return;
+    const def = getChordDefByRN(btn.dataset.rn);
+    if (def && def.family === family) {
+      btn.classList.add(`family-candidate-${family.toLowerCase()}`);
+    } else {
+      btn.classList.add("family-dimmed");
+    }
+  });
+}
+
 function selectFamily(chordIndex, family) {
+  if (STATE.isRevealed) return;
   STATE.userGuesses[chordIndex].familyGuess = family;
 
   const card = document.getElementById(`card-chord-${chordIndex}`);
+  card.classList.remove("card-unanswered");
   const buttons = card.querySelectorAll(".family-btn");
 
   buttons.forEach(btn => {
@@ -1941,10 +2135,32 @@ function selectFamily(chordIndex, family) {
       if (family === "D") btn.classList.add("selected-d");
     }
   });
+
+  // If current Roman numeral guess belongs to a different family, clear it so choices stay consistent
+  const currentRn = STATE.userGuesses[chordIndex].rnGuess;
+  if (currentRn) {
+    const rnDef = getChordDefByRN(currentRn);
+    if (rnDef && rnDef.family !== family) {
+      STATE.userGuesses[chordIndex].rnGuess = null;
+      const grid = document.getElementById(`roman-grid-${chordIndex}`);
+      grid.querySelectorAll(".roman-btn").forEach(b => b.classList.remove("active-rn"));
+    }
+  }
+
+  updateStage2CandidateHighlights(chordIndex, family);
 }
 
 function selectRomanNumeral(chordIndex, rn) {
+  if (STATE.isRevealed) return;
+  const def = getChordDefByRN(rn);
+  // Automatically sync parent functional family in Stage 1 so user doesn't have to click twice
+  if (def && STATE.userGuesses[chordIndex].familyGuess !== def.family) {
+    selectFamily(chordIndex, def.family);
+  }
+
   STATE.userGuesses[chordIndex].rnGuess = rn;
+  const card = document.getElementById(`card-chord-${chordIndex}`);
+  if (card) card.classList.remove("card-unanswered");
 
   const grid = document.getElementById(`roman-grid-${chordIndex}`);
   grid.querySelectorAll(".roman-btn").forEach(btn => {
@@ -1954,18 +2170,37 @@ function selectRomanNumeral(chordIndex, rn) {
 }
 
 function submitAnswers() {
+  if (STATE.isRevealed) {
+    generateNewExercise(true);
+    return;
+  }
+
+  const promptStatus = document.getElementById("prompt-status");
+
   // Check if user has answered all 3 chords for Stage 1
-  const missingStage1 = STATE.userGuesses.some(g => !g.familyGuess);
-  if (missingStage1) {
-    alert("Please select a functional family (Tonic, Subdominant, or Dominant) for all 3 chords!");
+  const missingStage1Indices = STATE.userGuesses
+    .map((g, idx) => (!g.familyGuess ? idx : -1))
+    .filter(idx => idx !== -1);
+
+  if (missingStage1Indices.length > 0) {
+    missingStage1Indices.forEach(idx => {
+      document.getElementById(`card-chord-${idx}`).classList.add("card-unanswered");
+    });
+    promptStatus.innerHTML = `<span style="color: var(--incorrect); font-weight: 500;">Select a functional family (T, S, or D) for all three chords before checking.</span>`;
     return;
   }
 
   // If Stage 2 is toggled on, check if Roman numerals are selected
   if (STATE.stage2Enabled) {
-    const missingStage2 = STATE.userGuesses.some(g => !g.rnGuess);
-    if (missingStage2) {
-      alert("Please select the exact Roman numeral for all 3 chords, or turn off Stage 2 toggle.");
+    const missingStage2Indices = STATE.userGuesses
+      .map((g, idx) => (!g.rnGuess ? idx : -1))
+      .filter(idx => idx !== -1);
+
+    if (missingStage2Indices.length > 0) {
+      missingStage2Indices.forEach(idx => {
+        document.getElementById(`card-chord-${idx}`).classList.add("card-unanswered");
+      });
+      promptStatus.innerHTML = `<span style="color: var(--incorrect); font-weight: 500;">Select a Roman numeral for each chord (or toggle off Stage 2).</span>`;
       return;
     }
   }
@@ -1974,6 +2209,7 @@ function submitAnswers() {
 }
 
 function revealAnswers(isDirectReveal = false) {
+  STATE.isRevealed = true;
   let allCorrectStage1 = true;
   let allCorrectStage2 = true;
 
@@ -1988,7 +2224,7 @@ function revealAnswers(isDirectReveal = false) {
     // Card boundary feedback
     const card = document.getElementById(`card-chord-${i}`);
     if (card) {
-      card.classList.remove("card-correct", "card-incorrect");
+      card.classList.remove("card-correct", "card-incorrect", "card-unanswered");
       if (hasGuess) {
         card.classList.add(isFamCorrect ? "card-correct" : "card-incorrect");
       }
@@ -2035,11 +2271,8 @@ function revealAnswers(isDirectReveal = false) {
 
     const famNameMap = { "T": "Tonic", "S": "Subdominant", "D": "Dominant" };
 
-    // Format pitch classes
-    const noteNamesString = chord.def.intervals.map(inter => {
-      return midiToPitchClass(STATE.currentRootMidi + inter, STATE.currentKeyName);
-    }).join(" - ");
-
+    // Format actual voiced notes (Bass + Upper Voices)
+    const upperVoicedNames = chord.upperVoices.map(m => midiToNoteName(m, STATE.currentKeyName)).join(" – ");
     const bassNoteName = midiToNoteName(chord.bass, STATE.currentKeyName);
 
     if (isFamCorrect) {
@@ -2070,7 +2303,7 @@ function revealAnswers(isDirectReveal = false) {
       fbDesc.innerText = chord.def.reason;
     }
 
-    fbNotes.innerHTML = `Chord: ${actualRN} (${chord.def.quality}) · Notes: ${noteNamesString} · Bass: ${bassNoteName}`;
+    fbNotes.innerHTML = `${actualRN} (${chord.def.quality}) · Bass: ${bassNoteName} · Upper: ${upperVoicedNames}`;
 
     // Update timeline label with actual Roman numeral
     document.getElementById(`timeline-c${i}-text`).innerHTML = `${actualRN} <span style="font-size: 0.72rem; opacity: 0.75">(${actualFam})</span>`;
@@ -2095,7 +2328,7 @@ function revealAnswers(isDirectReveal = false) {
       const rnGrid = document.getElementById(`roman-grid-${i}`);
       if (rnGrid) {
         rnGrid.querySelectorAll(".roman-btn").forEach(btn => {
-          btn.classList.remove("btn-correct-choice", "btn-wrong-choice", "btn-actual-target");
+          btn.classList.remove("btn-correct-choice", "btn-wrong-choice", "btn-actual-target", "family-dimmed");
           if (btn.dataset.rn === actualRN && !isRNCorrect) {
             btn.classList.add("btn-actual-target");
           }
@@ -2128,8 +2361,8 @@ function revealAnswers(isDirectReveal = false) {
   document.getElementById("btn-reveal-all").classList.add("hidden");
   const promptStatus = document.getElementById("prompt-status");
   promptStatus.innerHTML = allCorrectStage1
-    ? `<span style="color: var(--correct); font-weight: 500;">All three chords correctly identified.</span>`
-    : `<span style="color: var(--text-muted);">Review the functional resolutions and voicings above.</span>`;
+    ? `<span style="color: var(--correct); font-weight: 500;">All three chords correctly identified. Press <kbd>N</kbd> or <kbd>Enter</kbd> for next exercise.</span>`
+    : `<span style="color: var(--text-muted);">Review the functional resolutions above, or press <kbd>N</kbd> for a new exercise.</span>`;
 }
 
 function updateStatsDisplay() {
@@ -2140,12 +2373,17 @@ function updateStatsDisplay() {
   }
 }
 
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  const btn = document.getElementById("theme-toggle-btn");
+  if (btn) btn.innerText = theme === "dark" ? "Paper" : "Ebony";
+}
+
 function toggleTheme() {
   const isDark = document.documentElement.getAttribute("data-theme") === "dark";
   const next = isDark ? "light" : "dark";
-  document.documentElement.setAttribute("data-theme", next);
-  const btn = document.getElementById("theme-toggle-btn");
-  if (btn) btn.innerText = next === "dark" ? "Paper" : "Ebony";
+  applyTheme(next);
+  try { localStorage.setItem("ear_training_theme", next); } catch (e) {}
 }
 
 /* ========================================================================
@@ -2159,13 +2397,22 @@ function resetUI() {
   });
 
   document.querySelectorAll(".roman-btn").forEach(btn => {
-    btn.classList.remove("active-rn", "btn-correct-choice", "btn-wrong-choice", "btn-actual-target");
+    btn.classList.remove(
+      "active-rn",
+      "btn-correct-choice",
+      "btn-wrong-choice",
+      "btn-actual-target",
+      "family-candidate-t",
+      "family-candidate-s",
+      "family-candidate-d",
+      "family-dimmed"
+    );
   });
 
   // Hide feedback boxes and clear verdict pills
   for (let i = 0; i < 3; i++) {
     const card = document.getElementById(`card-chord-${i}`);
-    if (card) card.classList.remove("card-correct", "card-incorrect");
+    if (card) card.classList.remove("card-correct", "card-incorrect", "card-unanswered");
 
     const fb = document.getElementById(`feedback-${i}`);
     if (fb) {
@@ -2183,7 +2430,7 @@ function resetUI() {
 
   document.getElementById("btn-submit").classList.remove("hidden");
   document.getElementById("btn-reveal-all").classList.remove("hidden");
-  document.getElementById("prompt-status").innerText = "Assign each chord to its functional family, then check.";
+  document.getElementById("prompt-status").innerText = "Assign each chord to its functional family (or press 1 / 2 / 3), then check.";
 }
 
 function updateTimelineDisplay() {
@@ -2261,12 +2508,12 @@ function renderPianoKeyboard() {
     wk.className = "white-key";
     wk.id = `key-midi-${m}`;
     const name = midiToNoteName(m, "C");
-    // label C notes
     if (name.startsWith("C")) {
       wk.innerText = name;
     }
     wk.title = name;
-    wk.addEventListener("mousedown", () => {
+    wk.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
       playPreviewPitch(m);
     });
     container.appendChild(wk);
@@ -2275,18 +2522,17 @@ function renderPianoKeyboard() {
   // Render Black Keys with exact percentage positioning locked to the white key seam
   whiteKeys.forEach((m, wIndex) => {
     const pc = m % 12;
-    // Keys followed by black key: C(0), D(2), F(5), G(7), A(9)
     if ([0, 2, 5, 7, 9].includes(pc)) {
       const blackMidi = m + 1;
       if (blackMidi <= PIANO_END_MIDI) {
         const bk = document.createElement("div");
         bk.className = "black-key";
         bk.id = `key-midi-${blackMidi}`;
-        // Centered directly on the boundary line between white keys with zero drift
         bk.style.left = `${((wIndex + 1) / totalWhiteKeys) * 100}%`;
         const bName = midiToNoteName(blackMidi, "C");
         bk.title = bName;
-        bk.addEventListener("mousedown", (e) => {
+        bk.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
           e.stopPropagation();
           playPreviewPitch(blackMidi);
         });
@@ -2297,9 +2543,9 @@ function renderPianoKeyboard() {
 }
 
 function playPreviewPitch(midi) {
-  initAudioUserGesture();
-  const isBass = (midi < 56);
-  playMidiChord([midi], 0.7, isBass ? midi : null);
+  ensureAudioReady();
+  const isBass = (midi < 55);
+  playMidiChord([midi], 0.75, isBass ? midi : null);
 }
 
 function highlightPianoNotes(midiNotes, bassMidi) {
@@ -2326,9 +2572,16 @@ function clearPianoHighlights() {
    9. KEYBOARD SHORTCUTS
    ======================================================================== */
 
+function assignNextUnansweredFamily(fam) {
+  if (STATE.isRevealed) return;
+  let targetIdx = STATE.userGuesses.findIndex(g => !g.familyGuess);
+  if (targetIdx === -1) targetIdx = 2;
+  selectFamily(targetIdx, fam);
+}
+
 document.addEventListener("keydown", (e) => {
-  // If user is inside an input or select, don't hijack
-  if (["INPUT", "SELECT"].includes(e.target.tagName)) return;
+  if (["INPUT", "SELECT", "TEXTAREA"].includes(e.target.tagName)) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
 
   if (e.code === "Space") {
     e.preventDefault();
@@ -2340,7 +2593,14 @@ document.addEventListener("keydown", (e) => {
   } else if (e.key === "n" || e.key === "N") {
     generateNewExercise(true);
   } else if (e.key === "Enter") {
+    e.preventDefault();
     submitAnswers();
+  } else if (e.key === "1") {
+    assignNextUnansweredFamily("T");
+  } else if (e.key === "2") {
+    assignNextUnansweredFamily("S");
+  } else if (e.key === "3") {
+    assignNextUnansweredFamily("D");
   }
 });
 
@@ -2349,10 +2609,14 @@ document.addEventListener("keydown", (e) => {
    ======================================================================== */
 
 window.addEventListener("DOMContentLoaded", () => {
-  setupSynths();
+  try {
+    const savedTheme = localStorage.getItem("ear_training_theme");
+    if (savedTheme) applyTheme(savedTheme);
+  } catch (e) {}
+
   renderPianoKeyboard();
   buildRomanButtons();
-  generateNewExercise(false); // don't autoplay until user gesture
+  generateNewExercise(false);
 });
 </script>
 
