@@ -1113,6 +1113,8 @@
 
       <div class="header-meta">
         <span class="stats-summary"><strong id="stat-completed">0</strong> solved · <strong id="stat-accuracy">—</strong></span>
+        <button class="theme-toggle-btn hidden" id="btn-copy-log" onclick="copyHistoryLog()" title="Copy full session history to clipboard">Copy Log</button>
+        <button class="theme-toggle-btn hidden" id="btn-reset-log" onclick="resetHistoryLog()" title="Clear saved history">Reset</button>
         <a href="about.html" class="theme-toggle-btn" style="text-decoration: none;" title="Chord vocabulary, voicing rules, and progression bank">Musical Design</a>
         <button class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" title="Toggle visual theme">Ebony</button>
       </div>
@@ -1925,11 +1927,8 @@ const STATE = {
     { familyGuess: null, rnGuess: null }
   ],
 
-  // Stats
-  completedCount: 0,
-  correctStage1Chords: 0,
-  totalStage1Chords: 0,
-  currentStreak: 0
+  // Persisted history of checked exercises
+  history: []
 };
 
 // 3-Chord Major Syntactic Patterns
@@ -2490,17 +2489,17 @@ function revealAnswers(isDirectReveal = false) {
   });
 
   if (!isDirectReveal) {
-    STATE.completedCount++;
-    const correctCountThisRound = STATE.progression.filter((c, idx) => STATE.userGuesses[idx].familyGuess === c.def.family).length;
-    STATE.correctStage1Chords += correctCountThisRound;
-    STATE.totalStage1Chords += STATE.progressionLength;
-
-    if (allCorrectStage1 && (!STATE.stage2Enabled || allCorrectStage2)) {
-      STATE.currentStreak++;
-    } else {
-      STATE.currentStreak = 0;
-    }
-
+    const keyLabel = (KEY_DEFS[STATE.currentKeyName] || KEY_DEFS["C"]).label;
+    STATE.history.push({
+      key: keyLabel,
+      chords: STATE.progression.map((c, idx) => ({
+        rn: c.def.rn,
+        fam: c.def.family,
+        gFam: STATE.userGuesses[idx].familyGuess || "—",
+        gRN: STATE.stage2Enabled ? (STATE.userGuesses[idx].rnGuess || null) : null
+      }))
+    });
+    try { localStorage.setItem("ear_training_history", JSON.stringify(STATE.history)); } catch (e) {}
     updateStatsDisplay();
   }
 
@@ -2513,11 +2512,45 @@ function revealAnswers(isDirectReveal = false) {
 }
 
 function updateStatsDisplay() {
-  document.getElementById("stat-completed").innerText = STATE.completedCount;
-  if (STATE.totalStage1Chords > 0) {
-    const pct = Math.round((STATE.correctStage1Chords / STATE.totalStage1Chords) * 100);
-    document.getElementById("stat-accuracy").innerText = `${pct}%`;
-  }
+  const solved = STATE.history.length;
+  let correct = 0;
+  let total = 0;
+  STATE.history.forEach(entry => {
+    entry.chords.forEach(c => {
+      total++;
+      if (c.gFam === c.fam) correct++;
+    });
+  });
+  document.getElementById("stat-completed").innerText = solved;
+  document.getElementById("stat-accuracy").innerText = total > 0 ? `${Math.round((correct / total) * 100)}%` : "—";
+  document.getElementById("btn-copy-log").classList.toggle("hidden", solved === 0);
+  document.getElementById("btn-reset-log").classList.toggle("hidden", solved === 0);
+}
+
+function copyHistoryLog() {
+  if (!STATE.history.length) return;
+  const acc = document.getElementById("stat-accuracy").innerText;
+  const header = `Harmonic Ear Training Log (${STATE.history.length} solved · ${acc} accuracy)`;
+  const lines = STATE.history.map((entry, idx) => {
+    const actualStr = entry.chords.map(c => `${c.rn}(${c.fam})`).join(" → ");
+    const guessStr = entry.chords.map(c => {
+      const ok = c.gFam === c.fam && (!c.gRN || c.gRN === c.rn);
+      const label = c.gRN ? `${c.gFam}/${c.gRN}` : c.gFam;
+      return `${label} ${ok ? "✓" : "✗"}`;
+    }).join(", ");
+    return `#${idx + 1} | ${entry.key} | ${actualStr} | Guessed: ${guessStr}`;
+  });
+  navigator.clipboard.writeText([header, ...lines].join("\n")).then(() => {
+    const btn = document.getElementById("btn-copy-log");
+    btn.innerText = "Copied";
+    setTimeout(() => { btn.innerText = "Copy Log"; }, 1400);
+  });
+}
+
+function resetHistoryLog() {
+  STATE.history = [];
+  try { localStorage.removeItem("ear_training_history"); } catch (e) {}
+  updateStatsDisplay();
 }
 
 function applyTheme(theme) {
@@ -2597,7 +2630,7 @@ function resetUI() {
 
   document.getElementById("btn-submit").classList.remove("hidden");
   document.getElementById("btn-reveal-all").classList.remove("hidden");
-  document.getElementById("prompt-status").innerText = "Assign each chord to its functional family (or press 1 / 2 / 3), then check.";
+  document.getElementById("prompt-status").innerText = "Assign each chord to its functional family, then check.";
 }
 
 function updateTimelineDisplay() {
@@ -2771,8 +2804,11 @@ window.addEventListener("DOMContentLoaded", () => {
   try {
     const savedTheme = localStorage.getItem("ear_training_theme");
     if (savedTheme) applyTheme(savedTheme);
+    const savedHistory = localStorage.getItem("ear_training_history");
+    if (savedHistory) STATE.history = JSON.parse(savedHistory) || [];
   } catch (e) {}
 
+  updateStatsDisplay();
   renderPianoKeyboard();
   updateModeLabelsAndButtons();
   generateNewExercise(false);
