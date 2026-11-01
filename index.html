@@ -2491,6 +2491,7 @@ function revealAnswers(isDirectReveal = false) {
   if (!isDirectReveal) {
     const keyLabel = (KEY_DEFS[STATE.currentKeyName] || KEY_DEFS["C"]).label;
     STATE.history.push({
+      ts: new Date().toISOString().slice(0, 16).replace("T", " "),
       key: keyLabel,
       chords: STATE.progression.map((c, idx) => ({
         rn: c.def.rn,
@@ -2538,7 +2539,7 @@ function copyHistoryLog() {
       const label = c.gRN ? `${c.gFam}/${c.gRN}` : c.gFam;
       return `${label} ${ok ? "✓" : "✗"}`;
     }).join(", ");
-    return `#${idx + 1} | ${entry.key} | ${actualStr} | Guessed: ${guessStr}`;
+    return `#${idx + 1} | ${entry.ts ? entry.ts + " | " : ""}${entry.key} | ${actualStr} | Guessed: ${guessStr}`;
   });
   navigator.clipboard.writeText([header, ...lines].join("\n")).then(() => {
     const btn = document.getElementById("btn-copy-log");
