@@ -2339,20 +2339,35 @@ function selectRomanNumeral(chordIndex, rn) {
   });
 }
 
-function recordAttemptIfNeeded() {
-  if (STATE.hasChecked) return;
-  STATE.hasChecked = true;
-  const keyLabel = (KEY_DEFS[STATE.currentKeyName] || KEY_DEFS["C"]).label;
-  STATE.history.push({
-    ts: new Date().toISOString().slice(0, 16).replace("T", " "),
-    key: keyLabel,
-    chords: STATE.progression.map((c, idx) => ({
-      rn: c.def.rn,
-      fam: c.def.family,
-      gFam: STATE.userGuesses[idx].familyGuess || "—",
-      gRN: STATE.stage2Enabled ? (STATE.userGuesses[idx].rnGuess || null) : null
-    }))
-  });
+function snapshotGuesses() {
+  return STATE.userGuesses.map(g => ({
+    gFam: g.familyGuess || "—",
+    gRN: STATE.stage2Enabled ? (g.rnGuess || null) : null
+  }));
+}
+
+function recordCheckAttempt() {
+  const guesses = snapshotGuesses();
+  if (!STATE.hasChecked) {
+    STATE.hasChecked = true;
+    const keyLabel = (KEY_DEFS[STATE.currentKeyName] || KEY_DEFS["C"]).label;
+    STATE.history.push({
+      ts: new Date().toISOString().slice(0, 16).replace("T", " "),
+      key: keyLabel,
+      chords: STATE.progression.map((c, idx) => ({
+        rn: c.def.rn,
+        fam: c.def.family,
+        ...guesses[idx]
+      })),
+      retries: []
+    });
+  } else {
+    const currentEntry = STATE.history[STATE.history.length - 1];
+    if (currentEntry) {
+      if (!currentEntry.retries) currentEntry.retries = [];
+      currentEntry.retries.push(guesses);
+    }
+  }
   try { localStorage.setItem("ear_training_history", JSON.stringify(STATE.history)); } catch (e) {}
   updateStatsDisplay();
 }
@@ -2393,7 +2408,7 @@ function submitAnswers() {
     }
   }
 
-  recordAttemptIfNeeded();
+  recordCheckAttempt();
 
   let correctCount = 0;
   STATE.progression.forEach((chord, i) => {
@@ -2573,8 +2588,8 @@ function revealAnswers(isDirectReveal = false) {
     }
   });
 
-  if (!isDirectReveal) {
-    recordAttemptIfNeeded();
+  if (!isDirectReveal && !STATE.hasChecked) {
+    recordCheckAttempt();
   }
 
   document.getElementById("btn-submit").classList.add("hidden");
@@ -2601,18 +2616,26 @@ function updateStatsDisplay() {
   document.getElementById("btn-reset-log").classList.toggle("hidden", solved === 0);
 }
 
+function formatGuessRow(chords, guesses) {
+  return chords.map((c, idx) => {
+    const g = guesses[idx] || c;
+    const ok = g.gFam === c.fam && (!g.gRN || g.gRN === c.rn);
+    const label = g.gRN ? `${g.gFam}/${g.gRN}` : g.gFam;
+    return `${label} ${ok ? "✓" : "✗"}`;
+  }).join(", ");
+}
+
 function copyHistoryLog() {
   if (!STATE.history.length) return;
   const acc = document.getElementById("stat-accuracy").innerText;
-  const header = `Harmonic Ear Training Log (${STATE.history.length} solved · ${acc} accuracy)`;
+  const header = `Harmonic Ear Training Log (${STATE.history.length} solved · ${acc} first-try accuracy)`;
   const lines = STATE.history.map((entry, idx) => {
     const actualStr = entry.chords.map(c => `${c.rn}(${c.fam})`).join(" → ");
-    const guessStr = entry.chords.map(c => {
-      const ok = c.gFam === c.fam && (!c.gRN || c.gRN === c.rn);
-      const label = c.gRN ? `${c.gFam}/${c.gRN}` : c.gFam;
-      return `${label} ${ok ? "✓" : "✗"}`;
-    }).join(", ");
-    return `#${idx + 1} | ${entry.ts ? entry.ts + " | " : ""}${entry.key} | ${actualStr} | Guessed: ${guessStr}`;
+    const guessStr = formatGuessRow(entry.chords, entry.chords);
+    const retryStr = (entry.retries || [])
+      .map((r, rIdx) => ` | Retry ${rIdx + 1}: ${formatGuessRow(entry.chords, r)}`)
+      .join("");
+    return `#${idx + 1} | ${entry.ts ? entry.ts + " | " : ""}${entry.key} | ${actualStr} | Guessed: ${guessStr}${retryStr}`;
   });
   navigator.clipboard.writeText([header, ...lines].join("\n")).then(() => {
     const btn = document.getElementById("btn-copy-log");
