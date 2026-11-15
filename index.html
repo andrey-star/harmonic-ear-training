@@ -1911,6 +1911,7 @@ const STATE = {
   progressionStyle: "syntactic",
   tempoBpm: 75,
   stage2Enabled: false,
+  hasChecked: false,
   isRevealed: false,
   lastPatternKey: "",
 
@@ -2107,6 +2108,7 @@ function generateNewExercise(autoPlay = true) {
   STATE.progression = buildProgressionVoicings(STATE.tonicAnchor, STATE.currentRootMidi, STATE.currentKeyName);
 
   // Reset user guess state
+  STATE.hasChecked = false;
   STATE.isRevealed = false;
   STATE.userGuesses = Array.from({ length: STATE.progressionLength }, () => ({
     familyGuess: null,
@@ -2275,16 +2277,30 @@ function updateStage2CandidateHighlights(chordIndex, family) {
   });
 }
 
+function clearCardVerdict(chordIndex) {
+  const card = document.getElementById(`card-chord-${chordIndex}`);
+  if (card) {
+    card.classList.remove("card-correct", "card-incorrect", "card-unanswered");
+    card.querySelectorAll(".family-btn, .roman-btn").forEach(btn => {
+      btn.classList.remove("btn-correct-choice", "btn-wrong-choice", "btn-actual-target");
+    });
+  }
+  const bf = document.getElementById(`badge-fam-${chordIndex}`);
+  if (bf) bf.innerHTML = "";
+  const br = document.getElementById(`badge-rn-${chordIndex}`);
+  if (br) br.innerHTML = "";
+}
+
 function selectFamily(chordIndex, family) {
   if (STATE.isRevealed || !STATE.userGuesses[chordIndex]) return;
   STATE.userGuesses[chordIndex].familyGuess = family;
+  clearCardVerdict(chordIndex);
 
   const card = document.getElementById(`card-chord-${chordIndex}`);
-  card.classList.remove("card-unanswered");
   const buttons = card.querySelectorAll(".family-btn");
 
   buttons.forEach(btn => {
-    btn.classList.remove("selected-t", "selected-s", "selected-d", "btn-correct-choice", "btn-wrong-choice", "btn-actual-target");
+    btn.classList.remove("selected-t", "selected-s", "selected-d");
     if (btn.dataset.fam === family) {
       if (family === "T") btn.classList.add("selected-t");
       if (family === "S") btn.classList.add("selected-s");
@@ -2311,17 +2327,34 @@ function selectRomanNumeral(chordIndex, rn) {
   const def = getChordDefByRN(rn);
   if (def && STATE.userGuesses[chordIndex].familyGuess !== def.family) {
     selectFamily(chordIndex, def.family);
+  } else {
+    clearCardVerdict(chordIndex);
   }
 
   STATE.userGuesses[chordIndex].rnGuess = rn;
-  const card = document.getElementById(`card-chord-${chordIndex}`);
-  if (card) card.classList.remove("card-unanswered");
 
   const grid = document.getElementById(`roman-grid-${chordIndex}`);
   grid.querySelectorAll(".roman-btn").forEach(btn => {
-    btn.classList.remove("btn-correct-choice", "btn-wrong-choice", "btn-actual-target");
     btn.classList.toggle("active-rn", btn.dataset.rn === rn);
   });
+}
+
+function recordAttemptIfNeeded() {
+  if (STATE.hasChecked) return;
+  STATE.hasChecked = true;
+  const keyLabel = (KEY_DEFS[STATE.currentKeyName] || KEY_DEFS["C"]).label;
+  STATE.history.push({
+    ts: new Date().toISOString().slice(0, 16).replace("T", " "),
+    key: keyLabel,
+    chords: STATE.progression.map((c, idx) => ({
+      rn: c.def.rn,
+      fam: c.def.family,
+      gFam: STATE.userGuesses[idx].familyGuess || "—",
+      gRN: STATE.stage2Enabled ? (STATE.userGuesses[idx].rnGuess || null) : null
+    }))
+  });
+  try { localStorage.setItem("ear_training_history", JSON.stringify(STATE.history)); } catch (e) {}
+  updateStatsDisplay();
 }
 
 function submitAnswers() {
@@ -2360,7 +2393,59 @@ function submitAnswers() {
     }
   }
 
-  revealAnswers(false);
+  recordAttemptIfNeeded();
+
+  let correctCount = 0;
+  STATE.progression.forEach((chord, i) => {
+    const guess = STATE.userGuesses[i];
+    const isFamCorrect = guess.familyGuess === chord.def.family;
+    const isRNCorrect = !STATE.stage2Enabled || (guess.rnGuess === chord.def.rn);
+    const isChordCorrect = isFamCorrect && isRNCorrect;
+    if (isChordCorrect) correctCount++;
+
+    const card = document.getElementById(`card-chord-${i}`);
+    if (card) {
+      card.classList.remove("card-correct", "card-incorrect", "card-unanswered");
+      card.classList.add(isChordCorrect ? "card-correct" : "card-incorrect");
+      card.querySelectorAll(".family-btn").forEach(btn => {
+        btn.classList.remove("btn-correct-choice", "btn-wrong-choice", "btn-actual-target");
+        if (btn.dataset.fam === guess.familyGuess) {
+          btn.classList.add(isFamCorrect ? "btn-correct-choice" : "btn-wrong-choice");
+        }
+      });
+    }
+
+    const badgeFam = document.getElementById(`badge-fam-${i}`);
+    if (badgeFam) {
+      badgeFam.innerHTML = isFamCorrect
+        ? `<span class="verdict-pill verdict-correct">✓ Correct</span>`
+        : `<span class="verdict-pill verdict-incorrect">✗ Incorrect</span>`;
+    }
+
+    if (STATE.stage2Enabled) {
+      const badgeRN = document.getElementById(`badge-rn-${i}`);
+      if (badgeRN) {
+        badgeRN.innerHTML = isRNCorrect
+          ? `<span class="verdict-pill verdict-correct">✓ Correct</span>`
+          : `<span class="verdict-pill verdict-incorrect">✗ Incorrect</span>`;
+      }
+      const rnGrid = document.getElementById(`roman-grid-${i}`);
+      if (rnGrid) {
+        rnGrid.querySelectorAll(".roman-btn").forEach(btn => {
+          btn.classList.remove("btn-correct-choice", "btn-wrong-choice", "btn-actual-target");
+          if (btn.dataset.rn === guess.rnGuess) {
+            btn.classList.add(isRNCorrect ? "btn-correct-choice" : "btn-wrong-choice");
+          }
+        });
+      }
+    }
+  });
+
+  if (correctCount === STATE.progressionLength) {
+    revealAnswers(false);
+  } else {
+    promptStatus.innerHTML = `<span style="color: var(--text-muted);">${correctCount} of ${STATE.progressionLength} correct. Re-listen and adjust the marked chord(s), then check again — or click <strong>Reveal All</strong>.</span>`;
+  }
 }
 
 function revealAnswers(isDirectReveal = false) {
@@ -2489,19 +2574,7 @@ function revealAnswers(isDirectReveal = false) {
   });
 
   if (!isDirectReveal) {
-    const keyLabel = (KEY_DEFS[STATE.currentKeyName] || KEY_DEFS["C"]).label;
-    STATE.history.push({
-      ts: new Date().toISOString().slice(0, 16).replace("T", " "),
-      key: keyLabel,
-      chords: STATE.progression.map((c, idx) => ({
-        rn: c.def.rn,
-        fam: c.def.family,
-        gFam: STATE.userGuesses[idx].familyGuess || "—",
-        gRN: STATE.stage2Enabled ? (STATE.userGuesses[idx].rnGuess || null) : null
-      }))
-    });
-    try { localStorage.setItem("ear_training_history", JSON.stringify(STATE.history)); } catch (e) {}
-    updateStatsDisplay();
+    recordAttemptIfNeeded();
   }
 
   document.getElementById("btn-submit").classList.add("hidden");
