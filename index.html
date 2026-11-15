@@ -2424,7 +2424,8 @@ function submitAnswers() {
       card.classList.add(isChordCorrect ? "card-correct" : "card-incorrect");
       card.querySelectorAll(".family-btn").forEach(btn => {
         btn.classList.remove("btn-correct-choice", "btn-wrong-choice", "btn-actual-target");
-        if (btn.dataset.fam === guess.familyGuess) {
+        // In Stage 2 (Roman numeral mode), keep family buttons neutral so we don't leak whether the T/S/D group was right.
+        if (!STATE.stage2Enabled && btn.dataset.fam === guess.familyGuess) {
           btn.classList.add(isFamCorrect ? "btn-correct-choice" : "btn-wrong-choice");
         }
       });
@@ -2432,9 +2433,11 @@ function submitAnswers() {
 
     const badgeFam = document.getElementById(`badge-fam-${i}`);
     if (badgeFam) {
-      badgeFam.innerHTML = isFamCorrect
-        ? `<span class="verdict-pill verdict-correct">✓ Correct</span>`
-        : `<span class="verdict-pill verdict-incorrect">✗ Incorrect</span>`;
+      badgeFam.innerHTML = STATE.stage2Enabled
+        ? ""
+        : (isFamCorrect
+          ? `<span class="verdict-pill verdict-correct">✓ Correct</span>`
+          : `<span class="verdict-pill verdict-incorrect">✗ Incorrect</span>`);
     }
 
     if (STATE.stage2Enabled) {
